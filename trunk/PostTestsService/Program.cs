@@ -26,11 +26,12 @@ namespace PostTestsService
                        
             //get sites 
             var sites = GetSites();
-            var ptndcl = new List<PostTestNextDue>();
-
+            
             //iterate sites
             foreach (var si in sites)
             {
+                var ptndcl = new List<PostTestNextDue>();
+
                 Console.WriteLine(si.Name);
                 
                 //Get the next date due for people - this works on tests
@@ -59,12 +60,12 @@ namespace PostTestsService
                             logger.Info("Number of tests set IsCurrent=0: " + retVal);
                             
                             //send email to user
-                            if (ptnd.Email != null)                                
+                            if (ptnd.Email != null)
                             {
-                                if (ptnd.Email.Trim().Length >0 ) 
+                                if (ptnd.Email.Trim().Length > 0)
                                 {
                                     string[] to = new string[] { ptnd.Email };
-                                    
+
                                     string subject = "Annual Halfpint Post Tests Due";
                                     string body = "Your annual halpint post tests are now available at the link below.  Please complete the required tests as soon as possible.";
 
