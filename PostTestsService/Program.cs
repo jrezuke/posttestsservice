@@ -86,17 +86,31 @@ namespace PostTestsService
                 //send the due list to the coordinators
                 if (ptndcl.Count > 0)
                 {
-                    var coordinators = GetUserInRole("Coordinator", si.ID);
-                    var toEmails = new List<string>();
-                    foreach (var coord in coordinators)
-                    {
-                        toEmails.Add(coord.Email);
-                    }
-                    
+                    SendCoordinatorsEmail(si.ID, ptndcl, path);
                 }
 
             } //foreach (var si in sites)
             Console.Read();
+        }
+
+        public static void SendCoordinatorsEmail(int site, List<PostTestNextDue> ptndcl, string path)
+        {
+            var coordinators = GetUserInRole("Coordinator", site);
+            var toEmails = new List<string>();
+            foreach (var coord in coordinators)
+            {
+                toEmails.Add(coord.Email);
+            }
+            StringBuilder sbBody = new StringBuilder("<p>The following people are due to take their annual post tests.</p>");
+
+            sbBody.Append("<table><tr><th>Name</th><th>Due Date</th></tr>");
+            foreach (var ptnd in ptndcl)
+            { 
+                sbBody.Append("<tr><td>"+ ptnd.Name + "</td><td>" + ptnd.sNextDueDate + "</td></tr>");            
+            }
+            sbBody.Append("</table>");
+
+            SendHtmlEmail("Post Tests - People Due", toEmails.ToArray(), null, sbBody.ToString(), path,  "http://halfpintstudy.org/hpProd/");
         }
 
         public static List<MembershipUser> GetUserInRole(string role, int site)
