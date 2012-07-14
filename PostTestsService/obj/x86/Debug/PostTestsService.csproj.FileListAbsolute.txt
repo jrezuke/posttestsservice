@@ -1,0 +1,9 @@
+D:\0Work\Halfpint\PostTestsService\PostTestsService\obj\x86\Debug\ResolveAssemblyReference.cache
+D:\0Work\Halfpint\PostTestsService\PostTestsService\bin\Debug\PostTestsService.exe.config
+D:\0Work\Halfpint\PostTestsService\PostTestsService\bin\Debug\NLog.config
+D:\0Work\Halfpint\PostTestsService\PostTestsService\bin\Debug\PostTestsService.exe
+D:\0Work\Halfpint\PostTestsService\PostTestsService\bin\Debug\PostTestsService.pdb
+D:\0Work\Halfpint\PostTestsService\PostTestsService\bin\Debug\NLog.dll
+D:\0Work\Halfpint\PostTestsService\PostTestsService\bin\Debug\NLog.xml
+D:\0Work\Halfpint\PostTestsService\PostTestsService\obj\x86\Debug\PostTestsService.exe
+D:\0Work\Halfpint\PostTestsService\PostTestsService\obj\x86\Debug\PostTestsService.pdb
