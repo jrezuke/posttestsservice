@@ -110,7 +110,7 @@ namespace PostTestsService
             }
             sbBody.Append("</table>");
 
-            SendHtmlEmail("Post Tests - People Due", toEmails.ToArray(), null, sbBody.ToString(), path,  "http://halfpintstudy.org/hpProd/");
+            SendHtmlEmail("Post Tests - People Due", toEmails.ToArray(), null, sbBody.ToString(), path, @"<a href='http://halfpintstudy.org/hpProd/'>Halfpint Study Website</a>");
         }
 
         public static List<MembershipUser> GetUserInRole(string role, int site)
