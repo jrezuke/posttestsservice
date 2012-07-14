@@ -9,6 +9,8 @@ using System.Configuration;
 using System.Net;
 using System.Net.Mail;
 using System.IO;
+using System.Web;
+using System.Web.Security;
 
 namespace PostTestsService
 {
@@ -17,7 +19,7 @@ namespace PostTestsService
         private static Logger logger = LogManager.GetCurrentClassLogger();
         
         static void Main(string[] args)
-        {
+        {            
             logger.Info("Starting PostTests Service");
 
             string path = System.AppDomain.CurrentDomain.BaseDirectory;
@@ -81,9 +83,63 @@ namespace PostTestsService
                     }
 
                 } //foreach (var ptnd in ptndl)
+                //send the due list to the coordinators
+                if (ptndcl.Count > 0)
+                {
+                    var coordinators = GetUserInRole("Coordinator", si.ID);
+                    var toEmails = new List<string>();
+                    foreach (var coord in coordinators)
+                    {
+                        toEmails.Add(coord.Email);
+                    }
+                    
+                }
 
             } //foreach (var si in sites)
             Console.Read();
+        }
+
+        public static List<MembershipUser> GetUserInRole(string role, int site)
+        {
+            var memUsers = new List<MembershipUser>();
+            string[] users = Roles.GetUsersInRole(role);
+
+            String strConn = ConfigurationManager.ConnectionStrings["Halfpint"].ToString();
+            using (SqlConnection conn = new SqlConnection(strConn))
+            {
+                try
+                {
+                    SqlCommand cmd = new SqlCommand("", conn);
+                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                    cmd.CommandText = ("GetSiteUsers");
+                    SqlParameter param = new SqlParameter("@siteID", site);
+                    cmd.Parameters.Add(param);
+
+                    conn.Open();
+                    SqlDataReader rdr = cmd.ExecuteReader();
+
+                    int pos = 0;
+                    string userName = "";
+                    while (rdr.Read())
+                    {
+                        pos = rdr.GetOrdinal("UserName");
+                        userName = rdr.GetString(pos);
+                        foreach (var u in users)
+                        {
+                            if (u == userName)
+                            {
+                                memUsers.Add(Membership.GetUser(u));
+                            }
+                        }
+                    }
+                    rdr.Close();
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex);
+                }
+            }
+            return memUsers;
         }
 
         static int SetPostTestsCompletedIsCurrent(string name)
