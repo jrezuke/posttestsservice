@@ -19,8 +19,7 @@ namespace PostTestsService
         private static Logger logger = LogManager.GetCurrentClassLogger();
         
         static void Main(string[] args)
-        {
-            List<NovaNetColumns> lines = NovaNetFile();
+        {           
 
             logger.Info("Starting PostTests Service");
 
@@ -94,6 +93,52 @@ namespace PostTestsService
                 }
 
             } //foreach (var si in sites)
+
+            //now update the nova net files
+            Console.WriteLine("-------------------------");
+            Console.WriteLine("Updating nova net files");
+            Console.WriteLine("-------------------------");
+            
+            //iterate sites
+            foreach (var si in sites)
+            {
+                var lines = GetNovaNetFile(si.Name);
+                if (lines == null)
+                    continue;               
+                
+                Console.WriteLine(si.Name);
+                var ptndl = GetPostTestPeopleFirstDateCompleted(si.ID);
+                
+                //iterate people
+
+                foreach (var ptnd in ptndl)
+                {
+                    if (ptnd.EmployeeID == null)
+                        continue;
+                    if (ptnd.EmployeeID.Length == 0)
+                        continue;
+                    
+                    NovaNetColumns line = lines.Find(c => c.EmployeeID == ptnd.EmployeeID );
+                    if (line != null)
+                    {
+                        DateTime lineDate = DateTime.Parse(line.endDate);
+                        DateTime dbDate = DateTime.Parse(ptnd.sNextDueDate);
+
+                        //if the database date is later than the file date 
+                        //do an update
+                        if (dbDate.CompareTo(lineDate) == 1)
+                        {
+                            line.endDate = ptnd.NextDueDate.ToString("M/d/yyyy");
+                        }
+                    }
+
+                    Console.WriteLine(ptnd.Name + ":" + ptnd.sNextDueDate + ", email: " + ptnd.Email + ", Employee ID: " + ptnd.EmployeeID);
+                }
+                
+                //write lines to new file
+                WriteNovaNetFile(si.Name, lines);
+                
+            } 
             Console.Read();
         }
 
@@ -258,7 +303,7 @@ namespace PostTestsService
                         if (!rdr.IsDBNull(pos))
                         {
                             ptnd.NextDueDate = rdr.GetDateTime(pos).AddYears(1);
-                            ptnd.sNextDueDate = ptnd.NextDueDate.Value.ToString("MM/dd/yyyy");
+                            ptnd.sNextDueDate = ptnd.NextDueDate.ToString("MM/dd/yyyy");
                         }
 
                         pos = rdr.GetOrdinal("Email");
@@ -343,13 +388,59 @@ namespace PostTestsService
             smtp.Send(mm);
         }
 
-        static List<NovaNetColumns> NovaNetFile()
+        static void WriteNovaNetFile(string site, List<NovaNetColumns> lines)
         {
-            DirectoryInfo di = new DirectoryInfo("");
+            string filePart = " StatStrip Nurse Training List.csv";
+            string file = site + filePart;
+
+            //write lines to new file
+            string fileName = Path.Combine("C:\\Halfpint\\NovaNet\\OperatorsList", "test.csv");
+            
+            StreamWriter sw = new StreamWriter(fileName, false);
+
+
+            sw.WriteLine("NovaNet Operator Import Data,version 2.0,,,,,,,,,");
+            foreach (var line in lines)
+            {
+                sw.Write(line.LastName + ",");
+                sw.Write(line.FirstName + ",");
+                sw.Write(line.col3 + ",");
+                sw.Write(line.col4 + ",");
+                sw.Write(line.col5 + ",");
+                sw.Write(line.EmployeeID + ",");
+                sw.Write(line.col7 + ",");
+                sw.Write(line.col8 + ",");
+                sw.Write(line.col9 + ",");
+                sw.Write(line.startDate + ",");
+                sw.Write(line.endDate);
+                sw.Write(sw.NewLine);
+            }
+            sw.Close();
+        }
+
+        static List<NovaNetColumns> GetNovaNetFile(string site)
+        {
+            DirectoryInfo di = new DirectoryInfo("C:\\Halfpint\\NovaNet\\OperatorsList");
+            var files = di.EnumerateFiles();
+            string fileName = "";
+
+            foreach (var file in files)
+            {
+                if (file.Name.StartsWith(site))
+                {
+                    fileName = file.Name;
+                    break;
+                }
+            }
+            if (fileName.Length == 0)
+                return null;
+
+            fileName = Path.Combine("C:\\Halfpint\\NovaNet\\OperatorsList", fileName);
             List<NovaNetColumns> lines = new List<NovaNetColumns>();
             char[] delimiters = new char[] { ',' };
-            using (StreamReader reader = new StreamReader("C:\\0\\Work\\Halfpint\\docs\\StatStrip Nurse Training List-09May2012.csv"))
+            using (StreamReader reader = new StreamReader(fileName))
             {
+                var cols = new NovaNetColumns();
                 int count = 1;
                 while (true)
                 {
@@ -358,22 +449,38 @@ namespace PostTestsService
                     {
                         break;
                     }
-                    var cols = new NovaNetColumns();
-                    string[] parts = line.Split(delimiters);
+                    
                     if (count == 1)
-                    {
-                        cols.LastName = parts[0];
+                    {                        
                         count = 2;
+                        continue;
                     }
                     else
                     {
+                        cols = new NovaNetColumns();
+                        string[] parts = line.Split(delimiters);
+                        string empID = "";
+                    
                         cols.LastName = parts[0];
                         cols.FirstName = parts[1];
                         cols.col3 = parts[2];
                         cols.col4 = parts[3];
                         cols.col5 = parts[4];
 
-                        cols.EmployeeID = parts[5];
+                        empID = parts[5];
+                        switch(site)
+                        {
+                            case "CHB":
+                                if (empID.Length < 6)
+                                {
+                                    var add = 6 - empID.Length;
+                                    for (int i = 0; i < add; i++)
+                                        empID = "0" + empID;                                    
+                                }
+                                    
+                                break;
+                        }
+                        cols.EmployeeID = empID;
                         cols.col7 = parts[6];
                         cols.col8 = parts[7];
                         cols.col9 = parts[8];
@@ -402,7 +509,7 @@ namespace PostTestsService
     public class PostTestNextDue
     {
         public string Name { get; set; }
-        public DateTime? NextDueDate { get; set; }
+        public DateTime NextDueDate { get; set; }
         public string sNextDueDate { get; set; }
         public string Email { get; set; }
         public string EmployeeID { get; set; }
