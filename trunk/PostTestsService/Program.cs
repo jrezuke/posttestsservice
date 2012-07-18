@@ -19,7 +19,9 @@ namespace PostTestsService
         private static Logger logger = LogManager.GetCurrentClassLogger();
         
         static void Main(string[] args)
-        {            
+        {
+            List<NovaNetColumns> lines = NovaNetFile();
+
             logger.Info("Starting PostTests Service");
 
             string path = System.AppDomain.CurrentDomain.BaseDirectory;
@@ -42,6 +44,7 @@ namespace PostTestsService
                 
                 foreach (var ptnd in ptndl)
                 {
+                    
                     Console.WriteLine(ptnd.Name + ":" + ptnd.sNextDueDate + ", email: " + ptnd.Email + ", Employee ID: " + ptnd.EmployeeID);
                     //make sure next due date is not null
                     if (ptnd.sNextDueDate != null)
@@ -107,7 +110,7 @@ namespace PostTestsService
             sbBody.Append("<table><tr><th>Name</th><th>Due Date</th></tr>");
             foreach (var ptnd in ptndcl)
             { 
-                sbBody.Append("<tr><td>"+ ptnd.Name + "</td><td>" + ptnd.sNextDueDate + "</td></tr>");            
+                sbBody.Append("<tr><td>"+ ptnd.Name + "</td><td>" + ptnd.sNextDueDate + "</td></td>" + ptnd.Email + "</td></tr>");            
             }
             sbBody.Append("</table>");
 
@@ -339,6 +342,53 @@ namespace PostTestsService
             SmtpClient smtp = new SmtpClient();
             smtp.Send(mm);
         }
+
+        static List<NovaNetColumns> NovaNetFile()
+        {
+            DirectoryInfo di = new DirectoryInfo("");
+            List<NovaNetColumns> lines = new List<NovaNetColumns>();
+            char[] delimiters = new char[] { ',' };
+            using (StreamReader reader = new StreamReader("C:\\0\\Work\\Halfpint\\docs\\StatStrip Nurse Training List-09May2012.csv"))
+            {
+                int count = 1;
+                while (true)
+                {
+                    string line = reader.ReadLine();
+                    if (line == null)
+                    {
+                        break;
+                    }
+                    var cols = new NovaNetColumns();
+                    string[] parts = line.Split(delimiters);
+                    if (count == 1)
+                    {
+                        cols.LastName = parts[0];
+                        count = 2;
+                    }
+                    else
+                    {
+                        cols.LastName = parts[0];
+                        cols.FirstName = parts[1];
+                        cols.col3 = parts[2];
+                        cols.col4 = parts[3];
+                        cols.col5 = parts[4];
+
+                        cols.EmployeeID = parts[5];
+                        cols.col7 = parts[6];
+                        cols.col8 = parts[7];
+                        cols.col9 = parts[8];
+                        cols.startDate = parts[9];
+                        cols.endDate = parts[10];
+                    }
+
+                    lines.Add(cols);
+                    // Console.WriteLine("{0} field(s)", parts.Length);
+                }
+            }
+            return lines;
+        }
+
+        
     }
 
     
@@ -358,5 +408,19 @@ namespace PostTestsService
         public string EmployeeID { get; set; }
     }
 
+    public class NovaNetColumns
+    {
+        public string LastName { get; set; }
+        public string FirstName { get; set; }
+        public string col3 { get; set; }
+        public string col4 { get; set; }
+        public string col5 { get; set; }
+        public string EmployeeID { get; set; }
+        public string col7 { get; set; }
+        public string col8 { get; set; }
+        public string col9 { get; set; }
+        public string startDate { get; set; }
+        public string endDate { get; set; }
+    }
 
 }
