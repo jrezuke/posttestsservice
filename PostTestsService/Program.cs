@@ -131,6 +131,11 @@ namespace PostTestsService
                             line.endDate = ptnd.NextDueDate.ToString("M/d/yyyy");
                         }
                     }
+                    else //this is a new operator
+                    {
+                        var newL = new NovaNetColumns();
+
+                    }
 
                     Console.WriteLine(ptnd.Name + ":" + ptnd.sNextDueDate + ", email: " + ptnd.Email + ", Employee ID: " + ptnd.EmployeeID);
                 }
