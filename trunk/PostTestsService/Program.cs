@@ -133,8 +133,22 @@ namespace PostTestsService
                     }
                     else //this is a new operator
                     {
-                        var newL = new NovaNetColumns();
-
+                        var nnc = new NovaNetColumns();
+                        var sep = new[] { ' ' };
+                        var names = ptnd.Name.Split(sep);
+                        nnc.LastName = names[1];
+                        nnc.FirstName = names[0];
+                        nnc.col3 = "ALL";
+                        nnc.col4 = "ALL";
+                        nnc.col5 = "StatStrip";
+                        nnc.EmployeeID = ptnd.EmployeeID;
+                        nnc.col7 = "T";
+                        nnc.col8 = "O";
+                        nnc.col9 = "Glucose";
+                        DateTime start = ptnd.NextDueDate.AddYears(-1);
+                        nnc.startDate = start.ToString("M/d/yyyy");
+                        nnc.endDate = ptnd.NextDueDate.ToString("M/d/yyyy");
+                        lines.Add(nnc);
                     }
 
                     Console.WriteLine(ptnd.Name + ":" + ptnd.sNextDueDate + ", email: " + ptnd.Email + ", Employee ID: " + ptnd.EmployeeID);
