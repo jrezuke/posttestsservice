@@ -58,7 +58,7 @@ namespace PostTestsService
                             //this allows the user to take the tests again
                             logger.Info("Post tests are due for " + ptnd.Name);
                             
-                            int retVal = SetPostTestsCompletedIsCurrent(ptnd.Name);
+                            int retVal = SetPostTestsCompletedIsCurrent(ptnd.ID);
                             logger.Info("Number of tests set IsCurrent=0: " + retVal);
                             
                             //send email to user
@@ -224,7 +224,7 @@ namespace PostTestsService
             return memUsers;
         }
 
-        static int SetPostTestsCompletedIsCurrent(string name)
+        static int SetPostTestsCompletedIsCurrent(int id)
         {            
             String strConn = ConfigurationManager.ConnectionStrings["Halfpint"].ToString();
              using (SqlConnection conn = new SqlConnection(strConn))
@@ -233,9 +233,9 @@ namespace PostTestsService
                 {
                     SqlCommand cmd = new SqlCommand("", conn);
                     cmd.CommandType = System.Data.CommandType.StoredProcedure;
-                    cmd.CommandText = "SetPostTestsCompletedIsCurrent";
+                    cmd.CommandText = "SetStaffPostTestsCompletedIsCurrent";
 
-                    SqlParameter param = new SqlParameter("@name", name);
+                    SqlParameter param = new SqlParameter("@id", id);
                     cmd.Parameters.Add(param);
 
                     conn.Open();
@@ -303,7 +303,7 @@ namespace PostTestsService
                 {
                     SqlCommand cmd = new SqlCommand("", conn);
                     cmd.CommandType = System.Data.CommandType.StoredProcedure;
-                    cmd.CommandText = ("GetPostTestPeopleFirstDateCompleted");
+                    cmd.CommandText = ("GetStaffPostTestsFirstDateCompletedBySite");
                     SqlParameter param = new SqlParameter("@siteID", siteID);
                     cmd.Parameters.Add(param);
 
@@ -314,6 +314,9 @@ namespace PostTestsService
                     while (rdr.Read())
                     {
                         ptnd = new PostTestNextDue();
+
+                        pos = rdr.GetOrdinal("ID");
+                        ptnd.ID = rdr.GetInt32(pos);
 
                         pos = rdr.GetOrdinal("Name");
                         ptnd.Name = rdr.GetString(pos);
@@ -527,6 +530,7 @@ namespace PostTestsService
 
     public class PostTestNextDue
     {
+        public int ID { get; set; }
         public string Name { get; set; }
         public DateTime NextDueDate { get; set; }
         public string sNextDueDate { get; set; }
