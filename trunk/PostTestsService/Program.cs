@@ -74,7 +74,6 @@ namespace PostTestsService
                                     SendHtmlEmail(subject, to, null, body, path, @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
 
                                 }
-
                             }
 
                             //add to list - to be sent to coordinator
