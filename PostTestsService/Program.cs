@@ -32,6 +32,7 @@ namespace PostTestsService
             foreach (var si in sites)
             {
                 var ptndcl = new List<PostTestNextDue>();
+                var ptndc2l = new List<PostTestNextDue>();
 
                 Console.WriteLine(si.Name);
                 
@@ -42,16 +43,25 @@ namespace PostTestsService
                 //iterate people
                 
                 foreach (var ptnd in ptndl)
-                {
-                    
+                {                    
                     Console.WriteLine(ptnd.Name + ":" + ptnd.sNextDueDate + ", email: " + ptnd.Email + ", Employee ID: " + ptnd.EmployeeID);
+                    //just do this for the nurse role
+                    if (ptnd.Role != "Nurse")
+                        continue;
+
+                    //make sure they are nova net certified
+                    if (!ptnd.IsNovaNetTested)
+                    {
+                        ptndc2l.Add(ptnd);
+                    }
+
                     //make sure next due date is not null
                     if (ptnd.sNextDueDate != null)
                     {
                         DateTime nd = DateTime.Parse(ptnd.sNextDueDate);
                         TimeSpan ts = nd - DateTime.Now;
                         Console.WriteLine("Window days: " + ts.Days);
-
+                                                
                         if (ts.Days <= 30)
                         {                            
                             //set previous tests to not current (IsCurrent=0)
@@ -82,6 +92,7 @@ namespace PostTestsService
                     }
                     else
                     { //do something about null tests
+
                     }
 
                 } //foreach (var ptnd in ptndl)
@@ -338,6 +349,18 @@ namespace PostTestsService
                         {
                             ptnd.EmployeeID = rdr.GetString(pos);
                         }
+
+                        pos = rdr.GetOrdinal("NovaStatStrip");
+                        if (!rdr.IsDBNull(pos))
+                        {
+                            ptnd.IsNovaNetTested = rdr.GetBoolean(pos);
+                        }
+
+                        pos = rdr.GetOrdinal("Role");
+                        if (!rdr.IsDBNull(pos))
+                        {
+                            ptnd.Role = rdr.GetString(pos);
+                        }
                         ptndl.Add(ptnd);
                     }
                     rdr.Close();
@@ -535,6 +558,8 @@ namespace PostTestsService
         public string sNextDueDate { get; set; }
         public string Email { get; set; }
         public string EmployeeID { get; set; }
+        public bool IsNovaNetTested { get; set; }
+        public string Role { get; set; }
     }
 
     public class NovaNetColumns
