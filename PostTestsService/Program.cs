@@ -33,6 +33,8 @@ namespace PostTestsService
             {
                 var ptndcl = new List<PostTestNextDue>();
                 var ptndc2l = new List<PostTestNextDue>();
+                var ptndc3l = new List<PostTestNextDue>();
+                var ptndc4l = new List<PostTestNextDue>();
 
                 Console.WriteLine(si.Name);
                 
@@ -40,20 +42,51 @@ namespace PostTestsService
                 //that are current (IsCurrent=1)
                 var ptndl = GetPostTestPeopleFirstDateCompleted(si.ID);
                 
-                //iterate people
-                
+                //iterate people                
                 foreach (var ptnd in ptndl)
-                {                    
-                    Console.WriteLine(ptnd.Name + ":" + ptnd.sNextDueDate + ", email: " + ptnd.Email + ", Employee ID: " + ptnd.EmployeeID);
+                {
+                    bool bContinue = false;
+                    Console.WriteLine(ptnd.Name + ":" + ptnd.sNextDueDate + ", email: " + ptnd.Email + ", Employee ID: " + ptnd.EmployeeID + ", Role: " + ptnd.Role);
                     //just do this for the nurse role
                     if (ptnd.Role != "Nurse")
-                        continue;
+                        bContinue = true;
 
                     //make sure they are nova net certified
                     if (!ptnd.IsNovaNetTested)
                     {
                         ptndc2l.Add(ptnd);
+                        bContinue = true;
                     }
+
+                    if (ptnd.Email == null)
+                    {
+                        ptndc3l.Add(ptnd);
+                        bContinue = true;
+                    }
+                    else 
+                    {
+                        if (ptnd.Email.Trim().Length == 0)
+                        {
+                            ptndc3l.Add(ptnd);
+                            bContinue = true;
+                        }
+                    }
+                    if (ptnd.EmployeeID == null)
+                    {
+                        ptndc4l.Add(ptnd);
+                        bContinue = true;
+                    }
+                    else
+                    {
+                        if (ptnd.EmployeeID.Trim().Length == 0)
+                        {
+                            ptndc4l.Add(ptnd);
+                            bContinue = true;
+                        }
+                    }
+
+                    if (bContinue)
+                        continue;
 
                     //make sure next due date is not null
                     if (ptnd.sNextDueDate != null)
@@ -71,21 +104,14 @@ namespace PostTestsService
                             int retVal = SetPostTestsCompletedIsCurrent(ptnd.ID);
                             logger.Info("Number of tests set IsCurrent=0: " + retVal);
                             
-                            //send email to user
-                            if (ptnd.Email != null)
-                            {
-                                if (ptnd.Email.Trim().Length > 0)
-                                {
-                                    string[] to = new string[] { ptnd.Email };
+                            //send email to user                                                           
+                            string[] to = new string[] { ptnd.Email };
 
-                                    string subject = "Annual Halfpint Post Tests Due";
-                                    string body = "Your annual halpint post tests are now available at the link below.  Please complete the required tests as soon as possible.";
+                            string subject = "Annual Halfpint Post Tests Due";
+                            string body = "Your annual halpint post tests are now available at the link below.  Please complete the required tests as soon as possible.";
 
-                                    SendHtmlEmail(subject, to, null, body, path, @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
-
-                                }
-                            }
-
+                            SendHtmlEmail(subject, to, null, body, path, @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                            
                             //add to list - to be sent to coordinator
                             ptndcl.Add(ptnd);
                         }
@@ -99,9 +125,13 @@ namespace PostTestsService
                 //send the due list to the coordinators
                 if (ptndcl.Count > 0)
                 {
-                    SendCoordinatorsEmail(si.ID, ptndcl, path);
+                    SendCoordinatorsEmailDue(si.ID, ptndcl, path);
                 }
-
+                //send the nova net not tested list to the coordinators
+                if (ptndc2l.Count > 0)
+                {
+                    SendCoordinatorsEmailDue(si.ID, ptndcl, path);
+                }
             } //foreach (var si in sites)
 
             //now update the nova net files
@@ -125,12 +155,21 @@ namespace PostTestsService
                 {
                     if (ptnd.EmployeeID == null)
                         continue;
-                    if (ptnd.EmployeeID.Length == 0)
+                    if (ptnd.EmployeeID.Trim().Length == 0)
+                        continue;
+                    if (ptnd.Role != "Nurse")
                         continue;
                     
-                    NovaNetColumns line = lines.Find(c => c.EmployeeID == ptnd.EmployeeID );
+                    NovaNetColumns line = lines.Find(c => c.EmployeeID == ptnd.EmployeeID );                    
                     if (line != null)
                     {
+                        //make sure they are nova net certified - if not then remove
+                        if (!ptnd.IsNovaNetTested)
+                        {
+                            lines.Remove(line);
+                            continue;
+                        }
+
                         DateTime lineDate = DateTime.Parse(line.endDate);
                         DateTime dbDate = DateTime.Parse(ptnd.sNextDueDate);
 
@@ -143,6 +182,9 @@ namespace PostTestsService
                     }
                     else //this is a new operator
                     {
+                        if (!ptnd.IsNovaNetTested)
+                            continue;
+
                         var nnc = new NovaNetColumns();
                         var sep = new[] { ' ' };
                         var names = ptnd.Name.Split(sep);
@@ -171,7 +213,7 @@ namespace PostTestsService
             Console.Read();
         }
 
-        public static void SendCoordinatorsEmail(int site, List<PostTestNextDue> ptndcl, string path)
+        public static void SendCoordinatorsEmailDue(int site, List<PostTestNextDue> ptndcl, string path)
         {
             var coordinators = GetUserInRole("Coordinator", site);
             var toEmails = new List<string>();
@@ -181,10 +223,30 @@ namespace PostTestsService
             }
             StringBuilder sbBody = new StringBuilder("<p>The following people are due to take their annual post tests.</p>");
 
-            sbBody.Append("<table><tr><th>Name</th><th>Due Date</th></tr>");
+            sbBody.Append("<table><tr><th>Name</th><th>Due Date</th><th>Email</th></tr>");
             foreach (var ptnd in ptndcl)
             { 
-                sbBody.Append("<tr><td>"+ ptnd.Name + "</td><td>" + ptnd.sNextDueDate + "</td></td>" + ptnd.Email + "</td></tr>");            
+                sbBody.Append("<tr><td>"+ ptnd.Name + "</td><td>" + ptnd.sNextDueDate + "</td><td>" + ptnd.Email + "</td></tr>");            
+            }
+            sbBody.Append("</table>");
+
+            SendHtmlEmail("Post Tests - People Due", toEmails.ToArray(), null, sbBody.ToString(), path, @"<a href='http://halfpintstudy.org/hpProd/'>Halfpint Study Website</a>");
+        }
+
+        public static void SendCoordinatorsEmailNovaNet(int site, List<PostTestNextDue> ptndcl, string path)
+        {
+            var coordinators = GetUserInRole("Coordinator", site);
+            var toEmails = new List<string>();
+            foreach (var coord in coordinators)
+            {
+                toEmails.Add(coord.Email);
+            }
+            StringBuilder sbBody = new StringBuilder("<p>The following people have not completed the Nova Net competency test.</p>");
+
+            sbBody.Append("<table><tr><th>Name</th><th>Email</th></tr>");
+            foreach (var ptnd in ptndcl)
+            {
+                sbBody.Append("<tr><td>" + ptnd.Name + "</td><td>" + ptnd.Email + "</td></tr>");
             }
             sbBody.Append("</table>");
 
@@ -409,11 +471,7 @@ namespace PostTestsService
             sb.Append("</div>");
             sb.Append("</body>");
             sb.Append("</html>");
-
-            //string sAv = "<img alt='' hspace=0 src='cid:mailLogoID' align=baseline /><br/>";
-            //sAv += body;
-
-
+                       
             AlternateView av = AlternateView.CreateAlternateViewFromString(sb.ToString(), null, "text/html");
 
             mailLogo.ContentId = "mailLogoID";
