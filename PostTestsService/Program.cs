@@ -22,7 +22,7 @@ namespace PostTestsService
         {           
 
             logger.Info("Starting PostTests Service");
-
+            
             string path = System.AppDomain.CurrentDomain.BaseDirectory;
                        
             //get sites 
@@ -37,7 +37,8 @@ namespace PostTestsService
                 var ptndc4l = new List<PostTestNextDue>();
 
                 Console.WriteLine(si.Name);
-                
+                logger.Info("For Site:" + si.Name + " - " + si.SiteID);
+                logger.Debug("For Site:" + si.Name + " - " + si.SiteID);
                 //Get the next date due for people - this works on tests
                 //that are current (IsCurrent=1)
                 var ptndl = GetPostTestPeopleFirstDateCompleted(si.ID);
@@ -49,7 +50,7 @@ namespace PostTestsService
                     Console.WriteLine(ptnd.Name + ":" + ptnd.sNextDueDate + ", email: " + ptnd.Email + ", Employee ID: " + ptnd.EmployeeID + ", Role: " + ptnd.Role);
                     //just do this for the nurse role
                     if (ptnd.Role != "Nurse")
-                        bContinue = true;
+                        continue;
 
                     //make sure they are nova net certified
                     if (!ptnd.IsNovaNetTested)
@@ -71,20 +72,22 @@ namespace PostTestsService
                             bContinue = true;
                         }
                     }
-                    if (ptnd.EmployeeID == null)
+                    if (si.EmpIDRequired)
                     {
-                        ptndc4l.Add(ptnd);
-                        bContinue = true;
-                    }
-                    else
-                    {
-                        if (ptnd.EmployeeID.Trim().Length == 0)
+                        if (ptnd.EmployeeID == null)
                         {
                             ptndc4l.Add(ptnd);
                             bContinue = true;
                         }
+                        else
+                        {
+                            if (ptnd.EmployeeID.Trim().Length == 0)
+                            {
+                                ptndc4l.Add(ptnd);
+                                bContinue = true;
+                            }
+                        }
                     }
-
                     if (bContinue)
                         continue;
 
@@ -130,7 +133,17 @@ namespace PostTestsService
                 //send the nova net not tested list to the coordinators
                 if (ptndc2l.Count > 0)
                 {
-                    SendCoordinatorsEmailDue(si.ID, ptndcl, path);
+                    SendCoordinatorsEmailNovaNet(si.ID, ptndc2l, path);
+                }
+                //send the emails not entered list to the coordinators
+                if (ptndc3l.Count > 0)
+                {
+                    SendCoordinatorsEmailMissingEmail(si.ID, ptndc3l, path);
+                }
+                //send the employee id not entered list to the coordinators
+                if (ptndc4l.Count > 0)
+                {
+                    SendCoordinatorsEmailMissingEmployeeID(si.ID, ptndc4l, path);
                 }
             } //foreach (var si in sites)
 
@@ -186,7 +199,7 @@ namespace PostTestsService
                             continue;
 
                         var nnc = new NovaNetColumns();
-                        var sep = new[] { ' ' };
+                        var sep = new[] { ',' };
                         var names = ptnd.Name.Split(sep);
                         nnc.LastName = names[1];
                         nnc.FirstName = names[0];
@@ -244,13 +257,61 @@ namespace PostTestsService
             StringBuilder sbBody = new StringBuilder("<p>The following people have not completed the Nova Net competency test.</p>");
 
             sbBody.Append("<table><tr><th>Name</th><th>Email</th></tr>");
+            string email;
             foreach (var ptnd in ptndcl)
             {
-                sbBody.Append("<tr><td>" + ptnd.Name + "</td><td>" + ptnd.Email + "</td></tr>");
+                email = "not entered";
+                if (ptnd.Email != null)
+                    email = ptnd.Email;
+                sbBody.Append("<tr><td>" + ptnd.Name + "</td><td>" + email   + "</td></tr>");
             }
             sbBody.Append("</table>");
 
             SendHtmlEmail("Post Tests - People Due", toEmails.ToArray(), null, sbBody.ToString(), path, @"<a href='http://halfpintstudy.org/hpProd/'>Halfpint Study Website</a>");
+        }
+
+        public static void SendCoordinatorsEmailMissingEmail(int site, List<PostTestNextDue> ptndcl, string path)
+        {
+            var coordinators = GetUserInRole("Coordinator", site);
+            var toEmails = new List<string>();
+            foreach (var coord in coordinators)
+            {
+                toEmails.Add(coord.Email);
+            }
+            StringBuilder sbBody = new StringBuilder("<p>The following people need to have their email address entered into the staff table.</p>");
+
+            sbBody.Append("<table><tr><th>Name</th></tr>");
+            foreach (var ptnd in ptndcl)
+            {
+                sbBody.Append("<tr><td>" + ptnd.Name + "</td></tr>");
+            }
+            sbBody.Append("</table>");
+
+            SendHtmlEmail("Post Tests - Staff - Employee Emails Missing", toEmails.ToArray(), null, sbBody.ToString(), path, @"<a href='http://halfpintstudy.org/hpProd/'>Halfpint Study Website</a>");
+        }
+
+        public static void SendCoordinatorsEmailMissingEmployeeID(int site, List<PostTestNextDue> ptndcl, string path)
+        {
+            var coordinators = GetUserInRole("Coordinator", site);
+            var toEmails = new List<string>();
+            foreach (var coord in coordinators)
+            {
+                toEmails.Add(coord.Email);
+            }
+            StringBuilder sbBody = new StringBuilder("<p>The following people need to have their employee ID entered into the staff table.</p>");
+
+            sbBody.Append("<table><tr><th>Name</th><th>Email</th></tr>");
+            string email;
+            foreach (var ptnd in ptndcl)
+            {
+                email = "not entered";
+                if (ptnd.Email != null)
+                    email = ptnd.Email;
+                sbBody.Append("<tr><td>" + ptnd.Name + "</td><td>" + email + "</td></tr>");
+            }
+            sbBody.Append("</table>");
+
+            SendHtmlEmail("Post Tests - Staff - Employee ID's Missing", toEmails.ToArray(), null, sbBody.ToString(), path, @"<a href='http://halfpintstudy.org/hpProd/'>Halfpint Study Website</a>");
         }
 
         public static List<MembershipUser> GetUserInRole(string role, int site)
@@ -350,7 +411,8 @@ namespace PostTestsService
                         si.Name = rdr.GetString(pos);
                         pos = rdr.GetOrdinal("SiteID");
                         si.SiteID = rdr.GetString(pos);
-
+                        pos = rdr.GetOrdinal("EmpIDRequired");
+                        si.EmpIDRequired = rdr.GetBoolean(pos);
                         sil.Add(si);
                     }
                     rdr.Close();
@@ -606,6 +668,7 @@ namespace PostTestsService
         public int ID { get; set; }
         public string SiteID { get; set; }
         public string Name { get; set; }
+        public bool EmpIDRequired { get; set; }
     }
 
     public class PostTestNextDue
