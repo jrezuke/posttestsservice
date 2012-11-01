@@ -55,12 +55,14 @@ namespace PostTestsService
                     //make sure they are nova net certified
                     if (!ptnd.IsNovaNetTested)
                     {
+                        logger.Info("Nova net certification needed for " + ptnd.Name);
                         ptndc2l.Add(ptnd);
                         bContinue = true;
                     }
 
                     if (ptnd.Email == null)
                     {
+                        logger.Info("Email missing for " + ptnd.Name);
                         ptndc3l.Add(ptnd);
                         bContinue = true;
                     }
@@ -68,6 +70,7 @@ namespace PostTestsService
                     {
                         if (ptnd.Email.Trim().Length == 0)
                         {
+                            logger.Info("Email missing for " + ptnd.Name);
                             ptndc3l.Add(ptnd);
                             bContinue = true;
                         }
@@ -76,6 +79,7 @@ namespace PostTestsService
                     {
                         if (ptnd.EmployeeID == null)
                         {
+                            logger.Info("Employee ID missing for " + ptnd.Name);
                             ptndc4l.Add(ptnd);
                             bContinue = true;
                         }
@@ -83,6 +87,7 @@ namespace PostTestsService
                         {
                             if (ptnd.EmployeeID.Trim().Length == 0)
                             {
+                                logger.Info("Employee ID missing for " + ptnd.Name);
                                 ptndc4l.Add(ptnd);
                                 bContinue = true;
                             }
@@ -164,6 +169,7 @@ namespace PostTestsService
                 
                 //iterate people
 
+                var ptndc5l = new List<PostTestNextDue>();
                 foreach (var ptnd in ptndl)
                 {
                     if (ptnd.EmployeeID == null)
@@ -173,7 +179,7 @@ namespace PostTestsService
                     if (ptnd.Role != "Nurse")
                         continue;
                     
-                    NovaNetColumns line = lines.Find(c => c.EmployeeID == ptnd.EmployeeID );                    
+                    NovaNetColumns line = lines.Find(c => c.EmployeeID == ptnd.EmployeeID );
                     if (line != null)
                     {
                         //make sure they are nova net certified - if not then remove
