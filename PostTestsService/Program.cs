@@ -16,26 +16,29 @@ namespace PostTestsService
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         
         static void Main(string[] args)
-        {           
-
+        {       
             Logger.Info("Starting PostTests Service");
             
             string path = AppDomain.CurrentDomain.BaseDirectory;
                        
             //get sites 
             var sites = GetSites();
-
-            var dueList = new List<PostTestNextDue>();
-            var competencyMissingList = new List<PostTestNextDue>();
-            var emailMissingList = new List<PostTestNextDue>();
-            var employeeIdMissingList = new List<PostTestNextDue>();
-            var staffAddedList = new List<PostTestNextDue>();
-            var staffRemovedList = new List<PostTestNextDue>();
-
+            var siteLists = new List<SiteEmailLists>();
+            
             //iterate sites
             foreach (var si in sites)
             {
-                
+                var siteEmailList = new SiteEmailLists
+                                        {
+                                            SiteId = si.Id,
+                                            DueList = new List<PostTestNextDue>(),
+                                            CompetencyMissingList = new List<PostTestNextDue>(),
+                                            EmailMissingList = new List<PostTestNextDue>(),
+                                            EmployeeIdMissingList = new List<PostTestNextDue>()
+                                        };
+
+                siteLists.Add(siteEmailList);
+
                 Console.WriteLine(si.Name);
                 Logger.Info("For Site:" + si.Name + " - " + si.SiteId);
                 Logger.Debug("For Site:" + si.Name + " - " + si.SiteId);
@@ -57,14 +60,14 @@ namespace PostTestsService
                     if ((!postTestNextDue.IsNovaNetTested) || (!postTestNextDue.IsVampTested))
                     {
                         Logger.Info("Competency needed for " + postTestNextDue.Name);
-                        competencyMissingList.Add(postTestNextDue);
+                        siteEmailList.CompetencyMissingList.Add(postTestNextDue);
                         bContinue = true;
                     }
 
                     if (postTestNextDue.Email == null)
                     {
                         Logger.Info("Email missing for " + postTestNextDue.Name);
-                        emailMissingList.Add(postTestNextDue);
+                        siteEmailList.EmailMissingList.Add(postTestNextDue);
                         bContinue = true;
                     }
                     else 
@@ -72,7 +75,7 @@ namespace PostTestsService
                         if (postTestNextDue.Email.Trim().Length == 0)
                         {
                             Logger.Info("Email missing for " + postTestNextDue.Name);
-                            emailMissingList.Add(postTestNextDue);
+                            siteEmailList.EmailMissingList.Add(postTestNextDue);
                             bContinue = true;
                         }
                     }
@@ -81,7 +84,7 @@ namespace PostTestsService
                         if (postTestNextDue.EmployeeId == null)
                         {
                             Logger.Info("Employee ID missing for " + postTestNextDue.Name);
-                            employeeIdMissingList.Add(postTestNextDue);
+                            siteEmailList.EmployeeIdMissingList.Add(postTestNextDue);
                             bContinue = true;
                         }
                         else
@@ -89,7 +92,7 @@ namespace PostTestsService
                             if (postTestNextDue.EmployeeId.Trim().Length == 0)
                             {
                                 Logger.Info("Employee ID missing for " + postTestNextDue.Name);
-                                employeeIdMissingList.Add(postTestNextDue);
+                                siteEmailList.EmployeeIdMissingList.Add(postTestNextDue);
                                 bContinue = true;
                             }
                         }
@@ -120,14 +123,9 @@ namespace PostTestsService
                     SendHtmlEmail(subject, to, null, body, path, @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
                             
                     //add to list - to be sent to coordinator
-                    dueList.Add(postTestNextDue);
+                    siteEmailList.DueList.Add(postTestNextDue);
                 } //foreach (var ptnd in ptndl)
                 
-                //send the due list to the coordinators
-                if ((dueList.Count > 0) || (competencyMissingList.Count > 0) || (emailMissingList.Count > 0) || (employeeIdMissingList.Count > 0))
-                {
-                    SendCoordinatorsEmail(si.Id, dueList, competencyMissingList, emailMissingList, employeeIdMissingList, path);
-                }
             } //foreach (var si in sites)
             
             //now update the nova net files
@@ -138,6 +136,9 @@ namespace PostTestsService
             //iterate sites
             foreach (var si in sites)
             {
+                var staffAddedList = new List<PostTestNextDue>();
+                var staffRemovedList = new List<PostTestNextDue>();
+
                 //skip for sites not needed
                 if (!si.EmpIdRequired)
                     continue;
@@ -162,11 +163,11 @@ namespace PostTestsService
                     NovaNetColumns line = lines.Find(c => c.EmployeeId == ptnd.EmployeeId );
                     if (line != null)
                     {
-                        //make sure they are nova net certified - if not then remove
-                        if (!ptnd.IsNovaNetTested)
+                        //make sure they are certified - if not then remove
+                        if ((!ptnd.IsNovaNetTested) || (!ptnd.IsVampTested))
                         {
                             lines.Remove(line);
-                            //email coord
+                            staffRemovedList.Add(ptnd);
                             continue;
                         }
 
@@ -182,10 +183,12 @@ namespace PostTestsService
                     }
                     else //this is a new operator
                     {
-                        if ((!ptnd.IsNovaNetTested) )
+                        //make sure they are certified - if not then don't add
+                        if ((!ptnd.IsNovaNetTested) || (!ptnd.IsVampTested))
                             continue;
 
                         //email coord
+                        staffAddedList.Add(ptnd);
                         var nnc = new NovaNetColumns();
                         var sep = new[] { ',' };
                         var names = ptnd.Name.Split(sep);
@@ -209,12 +212,29 @@ namespace PostTestsService
                 
                 //write lines to new file
                 WriteNovaNetFile(lines);
-                
-            } 
+
+            }//foreach (var si in sites) - write file
+
+            foreach (var si in sites)
+            {
+
+
+            }//foreach (var si in sites) - tests not completed
+
+            //send the due list to the coordinators
+            //if ((dueList.Count > 0) || (competencyMissingList.Count > 0) || (emailMissingList.Count > 0)
+            //    || (employeeIdMissingList.Count > 0) || (staffRemovedList.Count > 0) || (staffAddedList.Count > 0))
+            //{
+            //    SendCoordinatorsEmail(si.Id, dueList, competencyMissingList, emailMissingList,
+            //        employeeIdMissingList, staffRemovedList, staffAddedList, path);
+            //}
             Console.Read();
         }
 
-        public static void SendCoordinatorsEmail(int site, List<PostTestNextDue> dueList, List<PostTestNextDue> competencyMissingList, List<PostTestNextDue> emailMissingList, List<PostTestNextDue>  employeeIdMissingList, string path)
+        
+        public static void SendCoordinatorsEmail(int site, List<PostTestNextDue> dueList, List<PostTestNextDue> competencyMissingList, 
+            List<PostTestNextDue> emailMissingList, List<PostTestNextDue>  employeeIdMissingList,
+            List<PostTestNextDue> staffRemovedList, List<PostTestNextDue> staffAddedList, string path)
         {
             var coordinators = GetUserInRole("Coordinator", site);
             var sbBody = new StringBuilder("");
@@ -667,4 +687,23 @@ namespace PostTestsService
         public bool Found{ get ; set ; }
     }
 
+    public class TestsNotCompletedList
+    {
+        public string StaffName { get; set; }
+        public string Email { get; set; }
+        public List<string> TestsNotCompleted { get; set; }
+
+    }
+    
+    public class SiteEmailLists
+    {
+        public int SiteId { get; set; }
+        public List<PostTestNextDue> DueList { get; set; }
+        public List<PostTestNextDue> CompetencyMissingList { get; set; }
+        public List<PostTestNextDue> EmailMissingList { get; set; }
+        public List<PostTestNextDue> EmployeeIdMissingList { get; set; }
+        public List<PostTestNextDue> StaffAddedList { get; set; }
+        public List<PostTestNextDue> StaffRemovedList { get; set; }
+        public TestsNotCompletedList TestsNotCompleted { get; set; }
+    }
 }
