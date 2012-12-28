@@ -470,7 +470,7 @@ namespace PostTestsService
                 try
                 {
                     var cmd = new SqlCommand("", conn)
-                                  {CommandType = System.Data.CommandType.StoredProcedure, CommandText = "GetSites"};
+                                  {CommandType = System.Data.CommandType.StoredProcedure, CommandText = "GetSitesActive"};
 
                     conn.Open();
                     var rdr = cmd.ExecuteReader();
