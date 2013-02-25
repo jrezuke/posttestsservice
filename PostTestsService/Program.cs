@@ -107,13 +107,10 @@ namespace PostTestsService
 
                     //if (postTestNextDue.SNextDueDate == null) then either new staff or all tests completed are not current 
                     
-                    var nd = new DateTime();
-                    var ts = new TimeSpan();
-
                     if ( postTestNextDue.SNextDueDate != null)
                     {
-                        nd = DateTime.Parse(postTestNextDue.SNextDueDate);
-                        ts = nd - DateTime.Now;
+                        var nd = DateTime.Parse(postTestNextDue.SNextDueDate);
+                        var ts = nd - DateTime.Now;
                         Console.WriteLine("Window days: " + ts.Days);
                         if (ts.Days > 30) continue;
                     
@@ -157,16 +154,27 @@ namespace PostTestsService
                 if (!si.EmpIdRequired)
                     continue;
 
+                Console.WriteLine(si.Name);
+                Logger.Info("For Site:" + si.Name + " - " + si.SiteId);
+
                 var lines = GetNovaNetFile(si.Name);
                 if (lines == null)
-                    continue;               
-                
-                Console.WriteLine(si.Name);
-                var ptndl = GetPostTestPeopleFirstDateCompleted(si.Id);
+                {
+                    Console.WriteLine("No current nova net list for site:" + si.Name);
+                    Logger.Info("No current nova net list for site:" + si.Name);
+                    Console.WriteLine("created new list");
+                    Logger.Info("created new list");
+                    
+                    //create the new list
+                    lines = new List<NovaNetColumns>();
+                }
+
+                //var ptndl = GetPostTestPeopleFirstDateCompleted(si.Id);
                 
                 //iterate people
                 foreach (var ptnd in postTestNextDues2)
                 {
+                    //this is now handled in postTestNextDues2
                     //if (ptnd.EmployeeId == null)
                     //    continue;
                     //if (ptnd.EmployeeId.Trim().Length == 0)
@@ -178,28 +186,28 @@ namespace PostTestsService
                     if (line != null)
                     {
                         //make sure they are certified - if not then remove
-                        if ((!ptnd.IsNovaNetTested) || (!ptnd.IsVampTested))
-                        {
-                            lines.Remove(line);
-                            siteEmailList.StaffRemovedList.Add(ptnd);
-                            continue;
-                        }
+                        //this is now handled in postTestNextDues2  
+                        //if ((!ptnd.IsNovaNetTested) || (!ptnd.IsVampTested))
+                        //{
+                        //    lines.Remove(line);
+                        //    siteEmailList.StaffRemovedList.Add(ptnd);
+                        //    continue;
+                        //}
 
-                        DateTime lineDate = DateTime.Parse(line.EndDate);
-                        DateTime dbDate = DateTime.Parse(ptnd.SNextDueDate);
+                        line.Found = true;
+                        var lineDate = DateTime.Parse(line.EndDate);
+                        var endDate = DateTime.Now.AddYears(1);
+                        if(! string.IsNullOrEmpty(ptnd.SNextDueDate))
+                            endDate = DateTime.Parse(ptnd.SNextDueDate);
 
-                        //if the database date is later than the file date 
-                        //do an update
-                        if (dbDate.CompareTo(lineDate) == 1)
-                        {
-                            line.EndDate = ptnd.NextDueDate.ToString("M/d/yyyy");
-                        }
+                        //update the line end date
+                        line.EndDate = endDate.ToString("M/d/yyyy");
                     }
                     else //this is a new operator
                     {
                         //make sure they are certified - if not then don't add
-                        if ((!ptnd.IsNovaNetTested) || (!ptnd.IsVampTested))
-                            continue;
+                        //if ((!ptnd.IsNovaNetTested) || (!ptnd.IsVampTested))
+                        //    continue;
 
                         //email coord
                         siteEmailList.StaffAddedList.Add(ptnd);
@@ -215,15 +223,21 @@ namespace PostTestsService
                         nnc.Col7 = "T";
                         nnc.Col8 = "O";
                         nnc.Col9 = "Glucose";
-                        DateTime start = ptnd.NextDueDate.AddYears(-1);
-                        nnc.StartDate = start.ToString("M/d/yyyy");
-                        nnc.EndDate = ptnd.NextDueDate.ToString("M/d/yyyy");
+
+                        DateTime startDate = DateTime.Now;
+                        DateTime endDate = DateTime.Now.AddYears(1);
+                        
+                        nnc.StartDate = startDate.ToString("M/d/yyyy");
+                        nnc.EndDate = endDate.ToString("M/d/yyyy");
                         lines.Add(nnc);
                     }
 
                     Console.WriteLine(ptnd.Name + ":" + ptnd.SNextDueDate + ", email: " + ptnd.Email + ", Employee ID: " + ptnd.EmployeeId);
                 }
                 
+                //remove the nn lines that were not found
+
+
                 //write lines to new file
                 WriteNovaNetFile(lines);
 
@@ -401,8 +415,11 @@ namespace PostTestsService
                     mm.CC.Add(s);
             }
 
+            Console.WriteLine("Send Email");
+            Console.WriteLine("Subject");
+
             var smtp = new SmtpClient();
-            smtp.Send(mm);
+            //smtp.Send(mm);
         }
 
         public static List<MembershipUser> GetUserInRole(string role, int site)
@@ -508,6 +525,7 @@ namespace PostTestsService
             }
             return sil;
         }
+
         static IEnumerable<StaffTestsNotCompletedList> GetStaffPostTestCompleted(int siteId)
         {
             var tncll = new List<StaffTestsNotCompletedList>();
@@ -901,8 +919,6 @@ namespace PostTestsService
             }
             return lines;
         }
-
-        
     }
 
     
