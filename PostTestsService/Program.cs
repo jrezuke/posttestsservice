@@ -255,8 +255,8 @@ namespace PostTestsService
             Console.Read();
         }
 
-        
-        public static void SendCoordinatorsEmail(int site, SiteEmailLists siteEmailLists, string path)
+
+        internal static void SendCoordinatorsEmail(int site, SiteEmailLists siteEmailLists, string path)
         {
             var coordinators = GetUserInRole("Coordinator", site);
             var sbBody = new StringBuilder("");
@@ -365,7 +365,7 @@ namespace PostTestsService
             SendHtmlEmail("Post Tests Notifications", coordinators.Select(coord => coord.Email).ToArray(), null, sbBody.ToString(), path, @"<a href='http://halfpintstudy.org/hpProd/'>Halfpint Study Website</a>");
         }
 
-        public static void SendHtmlEmail(string subject, string[] toAddress, string[] ccAddress, string bodyContent, string appPath, string url, string bodyHeader = "")
+        internal static void SendHtmlEmail(string subject, string[] toAddress, string[] ccAddress, string bodyContent, string appPath, string url, string bodyHeader = "")
         {
 
             if (toAddress.Length == 0)
@@ -416,13 +416,15 @@ namespace PostTestsService
             }
 
             Console.WriteLine("Send Email");
-            Console.WriteLine("Subject");
+            Console.WriteLine("Subject:" + subject);
+            Console.Write("To:" + toAddress[0]);
+            Console.Write("Email:" + sb.ToString());
 
             var smtp = new SmtpClient();
-            //smtp.Send(mm);
+            smtp.Send(mm);
         }
 
-        public static List<MembershipUser> GetUserInRole(string role, int site)
+        internal static List<MembershipUser> GetUserInRole(string role, int site)
         {
             var memUsers = new List<MembershipUser>();
             string[] users = Roles.GetUsersInRole(role);
@@ -486,6 +488,38 @@ namespace PostTestsService
                 }
             }
             
+        }
+
+        public static List<String> GetActiveTests()
+        {
+            var list = new List<string>();
+            var strConn = ConfigurationManager.ConnectionStrings["Halfpint"].ToString();
+
+            using (var conn = new SqlConnection(strConn))
+            {
+                try
+                {
+                    var cmd = new SqlCommand("", conn)
+                                  {
+                                      CommandType = System.Data.CommandType.Text,
+                                      CommandText = "SELECT Name FROM PostTests WHERE Active=1"
+                                  };
+
+                    conn.Open();
+                    var rdr = cmd.ExecuteReader();
+                    while (rdr.Read())
+                    {
+                        list.Add(rdr.GetString(0));
+                    }
+                    rdr.Close();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex);
+                }
+            }
+
+            return list;
         }
 
         static List<SiteInfo> GetSites()
@@ -611,7 +645,7 @@ namespace PostTestsService
             return tncll;
         }
 
-        private static IEnumerable<PostTestNextDue> GetAllStaffPostTestsCompleted(int siteId)
+        static IEnumerable<PostTestNextDue> GetAllStaffPostTestsCompleted(int siteId)
         {
             var ptndl = new List<PostTestNextDue>();
 
@@ -637,16 +671,16 @@ namespace PostTestsService
                     string empId = null;
 
                     var minDueDate = DateTime.Parse("01/01/2100");
-                    var nextDueDate = new DateTime();
                     var bHasCompleteDate = false;
                     var bVampCompleted = false;
                     var bNovaNetCompleted = false;
-                    
+                    var role = String.Empty;
+
                     var rdr = cmd.ExecuteReader();
                     while (rdr.Read())
                     {
                         var pos = rdr.GetOrdinal("Role");
-                        var role = rdr.GetString(pos);
+                        role = rdr.GetString(pos);
                         var bIsCurrent = false;
 
                         if(role != "Nurse")
@@ -677,11 +711,9 @@ namespace PostTestsService
                             }
                             curId = iD;
                             minDueDate = DateTime.Parse("01/01/2100");
-                            nextDueDate = new DateTime();
                             bHasCompleteDate = false;
                             bVampCompleted = false;
                             bNovaNetCompleted = false;
-                            name = null;
                             email = null;
                             empId = null;
                         }
@@ -699,7 +731,7 @@ namespace PostTestsService
                             if (!rdr.IsDBNull(pos))
                             {
                                 bHasCompleteDate = true;
-                                nextDueDate = rdr.GetDateTime(pos);
+                                var nextDueDate = rdr.GetDateTime(pos);
                                 if (nextDueDate.CompareTo(minDueDate) < 0)
                                     minDueDate = nextDueDate;
                                 //SNextDueDate = ptnd.NextDueDate.ToString("MM/dd/yyyy");
@@ -732,6 +764,24 @@ namespace PostTestsService
                         
                     }
                     rdr.Close();
+                    //add the last staff
+                    if (curId != 0)
+                    {
+                        var ptnd = new PostTestNextDue();
+                        ptnd.Id = curId;
+                        ptnd.Name = name;
+                        ptnd.Role = role;
+                        ptnd.Email = email;
+                        ptnd.EmployeeId = empId;
+                        ptnd.IsNovaNetTested = bNovaNetCompleted;
+                        ptnd.IsVampTested = bVampCompleted;
+                        if (bHasCompleteDate)
+                        {
+                            ptnd.NextDueDate = minDueDate.AddYears(1);
+                            ptnd.SNextDueDate = ptnd.NextDueDate.ToString("MM/dd/yyyy");
+                        }
+                        ptndl.Add(ptnd);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -963,7 +1013,7 @@ namespace PostTestsService
     {
         public StaffTestsNotCompletedList()
         {
-            TestsNotCompleted = new List<string> {"Overview", "Checks", "NovaStatStrip", "VampJr"};
+            TestsNotCompleted = Program.GetActiveTests();
         }
 
         public int StaffId { get; set; }
