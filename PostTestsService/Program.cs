@@ -14,14 +14,14 @@ namespace PostTestsService
     class Program
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-        private static bool bSendEmails = true;
+        private static bool _bSendEmails = true;
 
         static void Main(string[] args)
         {       
             Logger.Info("Starting PostTests Service");
             if (args.Length > 0)
             {
-                bSendEmails = false;
+                _bSendEmails = false;
                 Console.WriteLine("Argument:" + args[0]);
             }
             string path = AppDomain.CurrentDomain.BaseDirectory;
@@ -131,8 +131,10 @@ namespace PostTestsService
 
                     //set previous tests to not current (IsCurrent=0)
                     //this allows the user to take the tests again
-                    int retVal = SetPostTestsCompletedIsCurrent(postTestNextDue.Id);
-                    Logger.Info("Number of tests set IsCurrent=0: " + retVal);
+                    
+                    //todo remove this for production
+                    //int retVal = SetPostTestsCompletedIsCurrent(postTestNextDue.Id);
+                    //Logger.Info("Number of tests set IsCurrent=0: " + retVal);
                             
                     //send email to user                                                           
                     var to = new[] { postTestNextDue.Email };
@@ -140,7 +142,7 @@ namespace PostTestsService
                     const string subject = "Annual Halfpint Post Tests Due";
                     const string body = "Your annual halpint post tests are now available at the link below.  Please complete the required tests as soon as possible.";
 
-                    if(bSendEmails)
+                    if(_bSendEmails)
                         SendHtmlEmail(subject, to, null, body, path, @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
                             
                     //add to list - to be sent to coordinator
@@ -185,6 +187,7 @@ namespace PostTestsService
                 
                 var postTestNextDues2 = sitePtnd2List.Find(x => x.SiteId == si.Id);
                 //iterate people
+                Logger.Info("sitePtnd2List.Find(x => x.SiteId == si.Id)");
                 foreach (var ptnd in postTestNextDues2.PostTestNextDueList)
                 {
                     //this is now handled in postTestNextDues2
@@ -253,10 +256,10 @@ namespace PostTestsService
 
                 //write lines to new file
                 WriteNovaNetFile(lines, si.Name);
-
+                Logger.Info("WriteNovaNetFile:" + si.Name);
             }//foreach (var si in sites) - write file
 
-            if (bSendEmails)
+            if (_bSendEmails)
             {
                 foreach (var si in sites)
                 {
