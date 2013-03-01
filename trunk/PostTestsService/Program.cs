@@ -19,23 +19,26 @@ namespace PostTestsService
         static void Main(string[] args)
         {       
             Logger.Info("Starting PostTests Service");
+            
             if (args.Length > 0)
             {
                 _bSendEmails = false;
                 Console.WriteLine("Argument:" + args[0]);
+                Logger.Info("Argument:" + args[0]);
             }
-            string path = AppDomain.CurrentDomain.BaseDirectory;
-            //this will be a parsed list for the 2nd run
-            var sitePtnd2List = new List<SitePostTestDueList>();
+            
+            var path = AppDomain.CurrentDomain.BaseDirectory;
             
             //get sites 
             var sites = GetSites();
-            var siteLists = new List<SiteEmailLists>();
             
             //iterate sites
             foreach (var si in sites)
             {
-                var siteEmailList = new SiteEmailLists
+                if (!si.EmpIdRequired)
+                    continue;
+
+                si.SiteEmailLists = new SiteEmailLists
                                         {
                                             SiteId = si.Id,
                                             DueList = new List<PostTestNextDue>(),
@@ -44,26 +47,21 @@ namespace PostTestsService
                                             EmployeeIdMissingList = new List<PostTestNextDue>()
                                         };
 
-                siteLists.Add(siteEmailList);
-
+                
                 Console.WriteLine(si.Name);
                 Logger.Info("For Site:" + si.Name + " - " + si.SiteId);
                 Logger.Debug("For Site:" + si.Name + " - " + si.SiteId);
                 
                 //Get the next date due for people - this works on tests
-                //that are current (IsCurrent=1)
-                var postTestNextDueList = GetAllStaffPostTestsCompleted(si.Id); //GetPostTestPeopleFirstDateCompleted(si.Id);
-                var postTestNextDues2 = new List<PostTestNextDue>();
-                var sitePostTestDueList = new SitePostTestDueList();
-
-                sitePostTestDueList.SiteId = si.Id;
-                sitePostTestDueList.PostTestNextDueList = postTestNextDues2;
-                sitePtnd2List.Add(sitePostTestDueList);
-
+                //that are current (IsCurrent=1) - 
+                si.PostTestNextDues = GetAllStaffPostTestsCompleted(si.Id); //GetPostTestPeopleFirstDateCompleted(si.Id);
+                
+                si.PostTestNextDues2 = new List<PostTestNextDue>();
+                
                 //iterate people                
-                foreach (var postTestNextDue in postTestNextDueList)
+                foreach (var postTestNextDue in si.PostTestNextDues)
                 {
-                    bool bContinue = false;
+                    var bContinue = false;
                     Console.WriteLine(postTestNextDue.Name + ":" + postTestNextDue.SNextDueDate + ", email: " + postTestNextDue.Email + ", Employee ID: " + postTestNextDue.EmployeeId + ", Role: " + postTestNextDue.Role);
                     //just do this for the nurse role
                     if (postTestNextDue.Role != "Nurse")
@@ -73,14 +71,14 @@ namespace PostTestsService
                     if ((!postTestNextDue.IsNovaNetTested) || (!postTestNextDue.IsVampTested))
                     {
                         Logger.Info("Competency needed for " + postTestNextDue.Name);
-                        siteEmailList.CompetencyMissingList.Add(postTestNextDue);
+                        si.SiteEmailLists.CompetencyMissingList.Add(postTestNextDue);
                         bContinue = true;
                     }
 
                     if (postTestNextDue.Email == null)
                     {
                         Logger.Info("Email missing for " + postTestNextDue.Name);
-                        siteEmailList.EmailMissingList.Add(postTestNextDue);
+                        si.SiteEmailLists.EmailMissingList.Add(postTestNextDue);
                         bContinue = true;
                     }
                     else 
@@ -88,7 +86,7 @@ namespace PostTestsService
                         if (postTestNextDue.Email.Trim().Length == 0)
                         {
                             Logger.Info("Email missing for " + postTestNextDue.Name);
-                            siteEmailList.EmailMissingList.Add(postTestNextDue);
+                            si.SiteEmailLists.EmailMissingList.Add(postTestNextDue);
                             bContinue = true;
                         }
                     }
@@ -97,7 +95,7 @@ namespace PostTestsService
                         if (postTestNextDue.EmployeeId == null)
                         {
                             Logger.Info("Employee ID missing for " + postTestNextDue.Name);
-                            siteEmailList.EmployeeIdMissingList.Add(postTestNextDue);
+                            si.SiteEmailLists.EmployeeIdMissingList.Add(postTestNextDue);
                             bContinue = true;
                         }
                         else
@@ -105,7 +103,7 @@ namespace PostTestsService
                             if (postTestNextDue.EmployeeId.Trim().Length == 0)
                             {
                                 Logger.Info("Employee ID missing for " + postTestNextDue.Name);
-                                siteEmailList.EmployeeIdMissingList.Add(postTestNextDue);
+                                si.SiteEmailLists.EmployeeIdMissingList.Add(postTestNextDue);
                                 bContinue = true;
                             }
                         }
@@ -113,10 +111,8 @@ namespace PostTestsService
                     if (bContinue)
                         continue;
 
-                    //create list for 2nd run
-                    postTestNextDues2.Add(postTestNextDue);
-
-                    //if (postTestNextDue.SNextDueDate == null) then either new staff or all tests completed are not current 
+                    //add to list2 for 2nd run
+                    si.PostTestNextDues2.Add(postTestNextDue);
                     
                     if ( postTestNextDue.SNextDueDate != null)
                     {
@@ -146,7 +142,7 @@ namespace PostTestsService
                         SendHtmlEmail(subject, to, null, body, path, @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
                             
                     //add to list - to be sent to coordinator
-                    siteEmailList.DueList.Add(postTestNextDue);
+                    si.SiteEmailLists.DueList.Add(postTestNextDue);
                 } //foreach (var ptnd in ptndl)
                 
             } //foreach (var si in sites)
@@ -159,15 +155,15 @@ namespace PostTestsService
             //iterate sites
             foreach (var si in sites)
             {
-                var siteEmailList = siteLists.Find(x => x.SiteId == si.Id);
-
-                siteEmailList.StaffAddedList = new List<PostTestNextDue>();
-                siteEmailList.StaffRemovedList = new List<PostTestNextDue>();
-
                 //skip for sites not needed
                 if (!si.EmpIdRequired)
                     continue;
 
+                //var siteEmailList = siteLists.Find(x => x.SiteId == si.Id);
+
+                si.SiteEmailLists.StaffAddedList = new List<PostTestNextDue>();
+                si.SiteEmailLists.StaffRemovedList = new List<PostTestNextDue>();
+                
                 Console.WriteLine(si.Name);
                 Logger.Info("For Site:" + si.Name + " - " + si.SiteId);
 
@@ -185,10 +181,9 @@ namespace PostTestsService
 
                 //var ptndl = GetPostTestPeopleFirstDateCompleted(si.Id);
                 
-                var postTestNextDues2 = sitePtnd2List.Find(x => x.SiteId == si.Id);
                 //iterate people
                 Logger.Info("sitePtnd2List.Find(x => x.SiteId == si.Id)");
-                foreach (var ptnd in postTestNextDues2.PostTestNextDueList)
+                foreach (var ptnd in si.PostTestNextDues2)
                 {
                     //this is now handled in postTestNextDues2
                     //if (ptnd.EmployeeId == null)
@@ -226,7 +221,7 @@ namespace PostTestsService
                         //    continue;
 
                         //email coord
-                        siteEmailList.StaffAddedList.Add(ptnd);
+                        si.SiteEmailLists.StaffAddedList.Add(ptnd);
                         var nnc = new NovaNetColumns();
                         var sep = new[] { ',' };
                         var names = ptnd.Name.Split(sep);
@@ -263,12 +258,14 @@ namespace PostTestsService
             {
                 foreach (var si in sites)
                 {
-                    var siteEmailList = siteLists.Find(x => x.SiteId == si.Id);
-                    if (si.EmpIdRequired)
-                    {
-                        siteEmailList.StaffTestsNotCompletedList = GetStaffPostTestCompleted(si.Id).ToList();
-                        SendCoordinatorsEmail(si.Id, si.Name, siteEmailList, path);
-                    }
+                    //skip for sites not needed
+                    if (!si.EmpIdRequired)
+                        continue;
+
+                    //var siteEmailList = siteLists.Find(x => x.SiteId == si.Id);
+                    si.SiteEmailLists.StaffTestsNotCompletedList = GetStaffPostTestCompleted(si.Id).ToList();
+                    SendCoordinatorsEmail(si.Id, si.Name, si.SiteEmailLists, path);
+                    
                 } //foreach (var si in sites) - tests not completed
             }
             Console.Read();
@@ -668,7 +665,7 @@ namespace PostTestsService
             return tncll;
         }
 
-        static IEnumerable<PostTestNextDue> GetAllStaffPostTestsCompleted(int siteId)
+        static List<PostTestNextDue> GetAllStaffPostTestsCompleted(int siteId)
         {
             var ptndl = new List<PostTestNextDue>();
 
@@ -698,6 +695,7 @@ namespace PostTestsService
                     var bVampCompleted = false;
                     var bNovaNetCompleted = false;
                     var role = String.Empty;
+                    var bIsNew = false;
 
                     var rdr = cmd.ExecuteReader();
                     while (rdr.Read())
@@ -705,9 +703,21 @@ namespace PostTestsService
                         var pos = rdr.GetOrdinal("Role");
                         role = rdr.GetString(pos);
                         var bIsCurrent = false;
-
-                        if(role != "Nurse")
+                        
+                        if (role == "Admin" )
                             continue;
+
+                        var userName = string.Empty;
+                        pos = rdr.GetOrdinal("UserName");
+                        if(!rdr.IsDBNull(pos))
+                            userName = rdr.GetString(pos);
+
+                        //skip generic roles
+                        if (role == "Nurse" || role == "DCC")
+                        {
+                            if(userName !=  string.Empty)
+                                continue;
+                        }
                         
                         pos = rdr.GetOrdinal("ID");
                         var iD = rdr.GetInt32(pos);
@@ -732,6 +742,8 @@ namespace PostTestsService
                                     ptnd.NextDueDate = minDueDate.AddYears(1);
                                     ptnd.SNextDueDate = ptnd.NextDueDate.ToString("MM/dd/yyyy");
                                 }
+                                ptnd.IsNew = bIsNew;
+
                                 ptndl.Add(ptnd);
                             }
                             curId = iD;
@@ -739,6 +751,7 @@ namespace PostTestsService
                             bHasCompleteDate = false;
                             bVampCompleted = false;
                             bNovaNetCompleted = false;
+                            bIsNew = false;
                             email = null;
                             empId = null;
                         }
@@ -747,8 +760,13 @@ namespace PostTestsService
                         name = rdr.GetString(pos);
 
                         pos = rdr.GetOrdinal("IsCurrent");
-                        if (!rdr.IsDBNull(pos))
+                        if (rdr.IsDBNull(pos))
+                            bIsNew = true;
+                        else
+                        {
+                            bIsNew = false;
                             bIsCurrent = rdr.GetBoolean(pos);
+                        }
 
                         if (bIsCurrent)
                         {
@@ -789,6 +807,7 @@ namespace PostTestsService
                         
                     }
                     rdr.Close();
+                    
                     //add the last staff
                     if (curId != 0)
                     {
@@ -800,7 +819,8 @@ namespace PostTestsService
                                            Email = email,
                                            EmployeeId = empId,
                                            IsNovaNetTested = bNovaNetCompleted,
-                                           IsVampTested = bVampCompleted
+                                           IsVampTested = bVampCompleted,
+                                           IsNew = bIsNew
                                        };
                         if (bHasCompleteDate)
                         {
@@ -1091,6 +1111,9 @@ namespace PostTestsService
         public string SiteId { get; set; }
         public string Name { get; set; }
         public bool EmpIdRequired { get; set; }
+        public SiteEmailLists SiteEmailLists { get; set; }
+        public List<PostTestNextDue> PostTestNextDues { get; set; }
+        public List<PostTestNextDue> PostTestNextDues2 { get; set; } 
     }
 
     public class PostTestNextDue
@@ -1104,6 +1127,7 @@ namespace PostTestsService
         public bool IsNovaNetTested { get; set; }
         public bool IsVampTested { get; set; }
         public string Role { get; set; }
+        public bool IsNew { get; set; }
     }
 
     public class NovaNetColumns
