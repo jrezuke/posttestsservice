@@ -52,21 +52,21 @@ namespace PostTestsService
                 Logger.Info("For Site:" + si.Name + " - " + si.SiteId);
                 Logger.Debug("For Site:" + si.Name + " - " + si.SiteId);
                 
-                //Get the next date due for people - this works on tests
-                //that are current (IsCurrent=1) - 
+                //Get staff info including next due date - next due date will be 1 year from today for new staff
+                //staff roles not included are Admin, DCC , Nurse generic (nurse accounts with a user name)
                 si.PostTestNextDues = GetAllStaffPostTestsCompleted(si.Id); //GetPostTestPeopleFirstDateCompleted(si.Id);
                 
+                //this is used to build the tests not completed lists - only includes staff that can be added to the list
                 si.PostTestNextDues2 = new List<PostTestNextDue>();
-                
+
                 //iterate people                
                 foreach (var postTestNextDue in si.PostTestNextDues)
                 {
                     var bContinue = false;
                     Console.WriteLine(postTestNextDue.Name + ":" + postTestNextDue.SNextDueDate + ", email: " + postTestNextDue.Email + ", Employee ID: " + postTestNextDue.EmployeeId + ", Role: " + postTestNextDue.Role);
-                    //just do this for the nurse role
-                    if (postTestNextDue.Role != "Nurse")
-                        continue;
-
+                    
+                    
+                    
                     //make sure they are nova net certified
                     if ((!postTestNextDue.IsNovaNetTested) || (!postTestNextDue.IsVampTested))
                     {
@@ -110,6 +110,9 @@ namespace PostTestsService
                     }
                     if (bContinue)
                         continue;
+
+                    //see if all required post tests are completed
+                    
 
                     //add to list2 for 2nd run
                     si.PostTestNextDues2.Add(postTestNextDue);
