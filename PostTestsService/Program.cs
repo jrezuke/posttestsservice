@@ -282,7 +282,7 @@ namespace PostTestsService
                         //    continue;
 
                         //email coord
-                        si.SiteEmailLists.StaffAddedList.Add(ptnd);
+                        //si.SiteEmailLists.StaffAddedList.Add(ptnd);
                         var nnc = new NovaNetColumns();
                         var sep = new[] { ',' };
                         var names = ptnd.Name.Split(sep);
