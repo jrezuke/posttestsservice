@@ -31,7 +31,7 @@ namespace PostTestsService
             
             //get sites 
             var sites = GetSites();
-            
+
             //iterate sites
             foreach (var si in sites)
             {
@@ -41,6 +41,8 @@ namespace PostTestsService
                 si.SiteEmailLists = new SiteEmailLists
                                         {
                                             SiteId = si.Id,
+                                            NewStaffList = new List<PostTestNextDue>(),
+                                            ExpiredList = new List<PostTestNextDue>(),
                                             DueList = new List<PostTestNextDue>(),
                                             CompetencyMissingList = new List<PostTestNextDue>(),
                                             EmailMissingList = new List<PostTestNextDue>(),
@@ -56,16 +58,11 @@ namespace PostTestsService
                 //staff roles not included are Admin, DCC , Nurse generic (nurse accounts with a user name)
                 si.PostTestNextDues = GetAllStaffPostTestsCompleted(si.Id); //GetPostTestPeopleFirstDateCompleted(si.Id);
                 
-                //this is used to build the tests not completed lists - only includes staff that can be added to the list
-                si.PostTestNextDues2 = new List<PostTestNextDue>();
-
                 //iterate people                
                 foreach (var postTestNextDue in si.PostTestNextDues)
                 {
                     var bContinue = false;
                     Console.WriteLine(postTestNextDue.Name + ":" + postTestNextDue.SNextDueDate + ", email: " + postTestNextDue.Email + ", Employee ID: " + postTestNextDue.EmployeeId + ", Role: " + postTestNextDue.Role);
-                    
-                    
                     
                     //make sure they are nova net certified
                     if ((!postTestNextDue.IsNovaNetTested) || (!postTestNextDue.IsVampTested))
@@ -111,17 +108,23 @@ namespace PostTestsService
                     if (bContinue)
                         continue;
 
+                    TimeSpan tsDayWindow;
+                    string subject;
+                    string body;
+                    string[] to;
+                        
                     //see if all required post tests are completed
                     if (postTestNextDue.TestsNotCompleted.Count > 0)
                     {
                         //send email notification to user
                         if (postTestNextDue.IsNew)
                         {
+                            si.SiteEmailLists.NewStaffList.Add(postTestNextDue);
                             //send new user email
-                            string body = EmailBodies.PostTestsDueNewStaff(postTestNextDue.TestsNotCompleted);
-                            var to = new[] {postTestNextDue.Email};
+                            body = EmailBodies.PostTestsDueNewStaff(postTestNextDue.TestsNotCompleted);
+                            to = new[] {postTestNextDue.Email};
 
-                            var subject = "Annual Halfpint Post Tests";
+                            subject = "Please Read: Please Complete the Online HALF-PINT Post-Tests";
                             //var body = "Your annual halpint post tests are now available at the link below.  Please complete the required tests as soon as possible.";
 
                             //if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
@@ -133,26 +136,61 @@ namespace PostTestsService
                         }
                         else
                         {
-                            //send email users have taken tests in prior years    
+                            //staff that were 
+                            //check to see if they are within the 30 day window
+                            if (postTestNextDue.NextDueDate != null)
+                            {
+                                tsDayWindow = postTestNextDue.NextDueDate.Value - DateTime.Now;
+                                if (tsDayWindow.Days > 0)
+                                {
+                                    si.SiteEmailLists.DueList.Add(postTestNextDue);
+                                    postTestNextDue.IsOkForList = true;
+                                    //send new user email
+                                    body = EmailBodies.PostTestsDueStaff(postTestNextDue.TestsNotCompleted, postTestNextDue.NextDueDate.Value);
+                                    to = new[] { postTestNextDue.Email };
+
+                                    subject = "Please Read: Your HALF-PINT Training Has Expired";
+                                    
+                                    //if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                                    //{
+                                    if (_bSendEmails)
+                                        SendHtmlEmail(subject, to, null, body, path,
+                                                      @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                    //}
+                                }
+                                else
+                                {
+                                    //post tests have expired
+                                    si.SiteEmailLists.ExpiredList.Add(postTestNextDue);
+                                    //send new user email
+                                    body = EmailBodies.PostTestsExpiredStaff(postTestNextDue.TestsNotCompleted, postTestNextDue.NextDueDate.Value);
+                                    to = new[] { postTestNextDue.Email };
+
+                                    subject = "Please Read: Your HALF-PINT Training Has Expired";
+
+                                    //if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                                    //{
+                                    if (_bSendEmails)
+                                        SendHtmlEmail(subject, to, null, body, path,
+                                                      @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                    //}
+
+                                }
+                            }
                         }
                     }
                     else // check if tests are due
                     {
-
-
-
                         //add to list2 for 2nd run
                         //si.PostTestNextDues2.Add(postTestNextDue);
-
-                        var nd = DateTime.Parse(postTestNextDue.SNextDueDate);
-                        var ts = nd - DateTime.Now;
-                        Console.WriteLine("Window days: " + ts.Days);
-                        if (ts.Days > 30) continue;
-
+                        postTestNextDue.IsOkForList = true;
                         
-
+                        tsDayWindow = postTestNextDue.NextDueDate.Value - DateTime.Now;
+                        Console.WriteLine("Window days: " + tsDayWindow.Days);
+                        if (tsDayWindow.Days > 30) continue;
+                        
                         Logger.Info("Post tests are due for " + postTestNextDue.Name);
-
+                        
                         //set previous tests to not current (IsCurrent=0)
                         //this allows the user to take the tests again
 
@@ -161,14 +199,17 @@ namespace PostTestsService
                         //Logger.Info("Number of tests set IsCurrent=0: " + retVal);
 
                         //send email to user                                                           
-                        //to = new[] { postTestNextDue.Email };
+                        body = EmailBodies.PostTestsDueStaff(postTestNextDue.TestsNotCompleted, postTestNextDue.NextDueDate.Value);
+                        to = new[] { postTestNextDue.Email };
 
-                        //subject = "Annual Halfpint Post Tests Due";
-                        //body = "Your annual halpint post tests are now available at the link below.  Please complete the required tests as soon as possible.";
+                        subject = "Please Read: Your HALF-PINT Training Has Expired";
 
-                        //if(_bSendEmails)
-                        //    SendHtmlEmail(subject, to, null, body, path, @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
-
+                        //if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                        //{
+                        if (_bSendEmails)
+                            SendHtmlEmail(subject, to, null, body, path,
+                                          @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                        //}
                         //add to list - to be sent to coordinator
                         si.SiteEmailLists.DueList.Add(postTestNextDue);
                     }
@@ -187,64 +228,55 @@ namespace PostTestsService
                 //skip for sites not needed
                 if (!si.EmpIdRequired)
                     continue;
-
-                //var siteEmailList = siteLists.Find(x => x.SiteId == si.Id);
-
-                si.SiteEmailLists.StaffAddedList = new List<PostTestNextDue>();
-                si.SiteEmailLists.StaffRemovedList = new List<PostTestNextDue>();
                 
                 Console.WriteLine(si.Name);
                 Logger.Info("For Site:" + si.Name + " - " + si.SiteId);
 
-                var lines = GetNovaNetFile(si.Name);
-                if (lines == null)
-                {
-                    Console.WriteLine("No current nova net list for site:" + si.Name);
-                    Logger.Info("No current nova net list for site:" + si.Name);
-                    Console.WriteLine("created new list");
-                    Logger.Info("created new list");
-                    
-                    //create the new list
-                    lines = new List<NovaNetColumns>();
-                }
+                //create the new list
+                var lines = new List<NovaNetColumns>();
 
-                //var ptndl = GetPostTestPeopleFirstDateCompleted(si.Id);
+                //var lines =  GetNovaNetFile(si.Name);
+                //if (lines == null)
+                //{
+                //    Console.WriteLine("No current nova net list for site:" + si.Name);
+                //    Logger.Info("No current nova net list for site:" + si.Name);
+                //    Console.WriteLine("created new list");
+                //    Logger.Info("created new list");
+                    
+                //    //create the new list
+                //    lines = new List<NovaNetColumns>();
+                //}
                 
                 //iterate people
-                Logger.Info("sitePtnd2List.Find(x => x.SiteId == si.Id)");
-                foreach (var ptnd in si.PostTestNextDues2)
+                //Logger.Info("sitePtnd2List.Find(x => x.SiteId == si.Id)");
+                foreach (var ptnd in si.PostTestNextDues)
                 {
-                    //this is now handled in postTestNextDues2
-                    //if (ptnd.EmployeeId == null)
-                    //    continue;
-                    //if (ptnd.EmployeeId.Trim().Length == 0)
-                    //    continue;
-                    //if (ptnd.Role != "Nurse")
-                    //    continue;
-                    
-                    NovaNetColumns line = lines.Find(c => c.EmployeeId == ptnd.EmployeeId );
-                    if (line != null)
-                    {
-                        //make sure they are certified - if not then remove
-                        //this is now handled in postTestNextDues2  
-                        //if ((!ptnd.IsNovaNetTested) || (!ptnd.IsVampTested))
-                        //{
-                        //    lines.Remove(line);
-                        //    siteEmailList.StaffRemovedList.Add(ptnd);
-                        //    continue;
-                        //}
+                    if (!ptnd.IsOkForList)
+                        continue;
 
-                        line.Found = true;
-                        //var lineDate = DateTime.Parse(line.EndDate);
-                        var endDate = DateTime.Now.AddYears(1);
-                        if(! string.IsNullOrEmpty(ptnd.SNextDueDate))
-                            endDate = DateTime.Parse(ptnd.SNextDueDate);
+                    //NovaNetColumns line = lines.Find(c => c.EmployeeId == ptnd.EmployeeId );
+                    //if (line != null)
+                    //{
+                    //    //make sure they are certified - if not then remove
+                    //    //this is now handled in postTestNextDues2  
+                    //    //if ((!ptnd.IsNovaNetTested) || (!ptnd.IsVampTested))
+                    //    //{
+                    //    //    lines.Remove(line);
+                    //    //    siteEmailList.StaffRemovedList.Add(ptnd);
+                    //    //    continue;
+                    //    //}
 
-                        //update the line end date
-                        line.EndDate = endDate.ToString("M/d/yyyy");
-                    }
-                    else //this is a new operator
-                    {
+                    //    line.Found = true;
+                    //    //var lineDate = DateTime.Parse(line.EndDate);
+                    //    var endDate = DateTime.Now.AddYears(1);
+                    //    if(! string.IsNullOrEmpty(ptnd.SNextDueDate))
+                    //        endDate = DateTime.Parse(ptnd.SNextDueDate);
+
+                    //    //update the line end date
+                    //    line.EndDate = endDate.ToString("M/d/yyyy");
+                    //}
+                    //else //this is a new operator
+                    //{
                         //make sure they are certified - if not then don't add
                         //if ((!ptnd.IsNovaNetTested) || (!ptnd.IsVampTested))
                         //    continue;
@@ -265,12 +297,11 @@ namespace PostTestsService
                         nnc.Col9 = "Glucose";
 
                         DateTime startDate = DateTime.Now;
-                        DateTime endDate = DateTime.Now.AddYears(1);
                         
                         nnc.StartDate = startDate.ToString("M/d/yyyy");
-                        nnc.EndDate = endDate.ToString("M/d/yyyy");
+                        nnc.EndDate = ptnd.NextDueDate.Value.ToString("M/d/yyyy");
                         lines.Add(nnc);
-                    }
+                    //}
 
                     Console.WriteLine(ptnd.Name + ":" + ptnd.SNextDueDate + ", email: " + ptnd.Email + ", Employee ID: " + ptnd.EmployeeId);
                 }
@@ -292,7 +323,7 @@ namespace PostTestsService
                         continue;
 
                     //var siteEmailList = siteLists.Find(x => x.SiteId == si.Id);
-                    si.SiteEmailLists.StaffTestsNotCompletedList = GetStaffPostTestCompleted(si.Id).ToList();
+                    //si.SiteEmailLists.StaffTestsNotCompletedList = GetStaffPostTestCompleted(si.Id).ToList();
                     SendCoordinatorsEmail(si.Id, si.Name, si.SiteEmailLists, path);
                     
                 } //foreach (var si in sites) - tests not completed
@@ -1172,7 +1203,7 @@ namespace PostTestsService
         public bool EmpIdRequired { get; set; }
         public SiteEmailLists SiteEmailLists { get; set; }
         public List<PostTestNextDue> PostTestNextDues { get; set; }
-        public List<PostTestNextDue> PostTestNextDues2 { get; set; } 
+        //public List<PostTestNextDue> PostTestNextDues2 { get; set; } 
     }
 
     public class PostTestNextDue
@@ -1192,6 +1223,7 @@ namespace PostTestsService
         public bool IsVampTested { get; set; }
         public string Role { get; set; }
         public bool IsNew { get; set; }
+        public bool IsOkForList { get; set; }
         public List<String> TestsNotCompleted { get; set; } 
     }
 
@@ -1233,23 +1265,69 @@ namespace PostTestsService
     public class SiteEmailLists
     {
         public int SiteId { get; set; }
+        public List<PostTestNextDue> NewStaffList { get; set; }
+        public List<PostTestNextDue> ExpiredList { get; set; }
         public List<PostTestNextDue> DueList { get; set; }
         public List<PostTestNextDue> CompetencyMissingList { get; set; }
         public List<PostTestNextDue> EmailMissingList { get; set; }
         public List<PostTestNextDue> EmployeeIdMissingList { get; set; }
-        public List<PostTestNextDue> StaffAddedList { get; set; }
-        public List<PostTestNextDue> StaffRemovedList { get; set; }
         public List<StaffTestsNotCompletedList> StaffTestsNotCompletedList { get; set; }
     }
 
     public static class EmailBodies
     {
+        public static string PostTestsExpiredStaff(List<string> testsNotCompleted, DateTime dueDate)
+        {
+            var sb = new StringBuilder();
+            sb.Append("<p>Hello. You are receiving this email because the post-tests you took for the HALF-PINT study have expired.  Please go to the study website and take the required post-tests when you have time. Though you can review the training videos if you would like, you are only required to complete the post-tests (containing 3-5 multiple-choice questions each).</p>");
+
+            sb.Append("<p>You will receive automatic weekly email reminders until you have completed these post-tests. You are currently locked out of the Nova study glucometer. </p>");
+
+            sb.Append("<p>If you have any questions concerning this request, please contact the HALF-PINT Nurse Champion in your ICU, or the national study nurse, Kerry Coughlin-Wells (Kerry.Coughlin-Wells@childrens.harvard.edu). </p>");
+
+            sb.Append("<p>Thank you for your assistance!</p>");
+
+            sb.Append("<p>The HALF-PINT Study Team</p>");
+
+            sb.Append("<br/><p><strong>Required Modules Not Completed<strong></p>");
+            sb.Append("<ul>");
+            foreach (var test in testsNotCompleted)
+            {
+                sb.Append("<li>" + test + " </li>");
+            }
+            sb.Append("</ul>");
+            return sb.ToString();
+        }
+
+        public static string PostTestsDueStaff(List<string> testsNotCompleted, DateTime dueDate)
+        {
+            var sb = new StringBuilder();
+            sb.Append("<p>Hello. You are receiving this email because at least one of the online tests you completed for the HALF-PINT study will expire soon.  Please go to the study website and take the required post-tests when you have time. Though you can review the training videos if you would like, you are only required to complete the post-tests (containing 3-5 multiple-choice questions each).</p>");
+
+            sb.Append("<p>You will receive automatic weekly email reminders until you have completed these post-tests. If you are not able to take these tests prior to the due date of <strong>" + dueDate.ToShortDateString() + ",</strong> you will be locked out of the Nova study glucometer. </p>");
+
+            sb.Append("<p>If you have any questions concerning this request, please contact the HALF-PINT Nurse Champion in your ICU, or the national study nurse, Kerry Coughlin-Wells (Kerry.Coughlin-Wells@childrens.harvard.edu). </p>");
+
+            sb.Append("<p>Thank you for your assistance!</p>");
+
+            sb.Append("<p>The HALF-PINT Study Team</p>");
+
+            sb.Append("<br/><p><strong>Required Modules Not Completed<strong></p>");
+            sb.Append("<ul>");
+            foreach (var test in testsNotCompleted)
+            {
+                sb.Append("<li>" + test + " </li>");
+            }
+            sb.Append("</ul>");
+            return sb.ToString();
+        }
+
         public static string PostTestsDueNewStaff(List<string> testsNotCompleted )
         {
             var sb = new StringBuilder();
-            sb.Append("<p>As a new staff memeber you must complete all required post-tests. Please go to the study website, view the training videos and the take the required post-tests listed below when you have time.</p>");
-            
-            sb.Append("<p>You will receive weekly reminders until you have completed these post-tests.</p>");
+            sb.Append("<p>Hello. You are receiving this email because you have completed HALF-PINT hands-on competencies but have not yet taken the online post-tests required for you to be able to care for a patient on the HALF-PINT Study. Please go to the study website and take the required post-tests when you have time. Please review the training video for each module, then complete the post-test (containing 3-5 multiple-choice questions each).</p>");
+
+            sb.Append("<p>You will receive automatic weekly email reminders until you have completed these post-tests. You will be given access to the Nova study glucometer, and be able to care for patients on the study, once all your post-tests are complete.</p>");
 
             sb.Append("<p>If you have any questions concerning this request, please contact the HALF-PINT Nurse Champion in your ICU, or the national study nurse, Kerry Coughlin-Wells (Kerry.Coughlin-Wells@childrens.harvard.edu). </p>");
 
