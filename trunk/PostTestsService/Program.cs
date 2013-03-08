@@ -50,7 +50,7 @@ namespace PostTestsService
                 
                 Console.WriteLine(si.Name);
                 Logger.Info("For Site:" + si.Name + " - " + si.SiteId);
-                Logger.Debug("For Site:" + si.Name + " - " + si.SiteId);
+                //Logger.Debug("For Site:" + si.Name + " - " + si.SiteId);
                 
                 //Get staff info including next due date, tests not completed, is new staff - next due date will be 1 year from today for new staff
                 //staff roles not included are Admin, DCC , Nurse generic (nurse accounts with a user name)
@@ -111,7 +111,7 @@ namespace PostTestsService
                             bContinue = true;
                         }
                     }
-                    
+                  
                     if (bContinue)
                         continue;
 
@@ -204,8 +204,8 @@ namespace PostTestsService
                         //this allows the user to take the tests again
 
                         //todo remove this for production
-                        int retVal = SetPostTestsCompletedIsCurrent(postTestNextDue.Id);
-                        Logger.Info("Number of tests set IsCurrent=0: " + retVal);
+                        //int retVal = SetPostTestsCompletedIsCurrent(postTestNextDue.Id);
+                        //Logger.Info("Number of tests set IsCurrent=0: " + retVal);
 
                         //send email to user                                                           
                         postTestNextDue.TestsNotCompleted = GetActiveRequiredTests(true);
