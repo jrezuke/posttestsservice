@@ -79,39 +79,22 @@ namespace PostTestsService
                         bContinue = true;
                     }
 
-                    if (postTestNextDue.Email == null)
+                    if ( string.IsNullOrEmpty(postTestNextDue.Email))
                     {
                         Logger.Info("Email missing for " + postTestNextDue.Name);
                         si.SiteEmailLists.EmailMissingList.Add(postTestNextDue);
                         bContinue = true;
                     }
-                    else 
-                    {
-                        if (postTestNextDue.Email.Trim().Length == 0)
-                        {
-                            Logger.Info("Email missing for " + postTestNextDue.Name);
-                            si.SiteEmailLists.EmailMissingList.Add(postTestNextDue);
-                            bContinue = true;
-                        }
-                    }
+                    
                     stnc.Email = postTestNextDue.Email;
 
-                    if (postTestNextDue.EmployeeId == null)
+                    if (string.IsNullOrEmpty(postTestNextDue.EmployeeId))
                     {
                         Logger.Info("Employee ID missing for " + postTestNextDue.Name);
                         si.SiteEmailLists.EmployeeIdMissingList.Add(postTestNextDue);
                         bContinue = true;
                     }
-                    else
-                    {
-                        if (postTestNextDue.EmployeeId.Trim().Length == 0)
-                        {
-                            Logger.Info("Employee ID missing for " + postTestNextDue.Name);
-                            si.SiteEmailLists.EmployeeIdMissingList.Add(postTestNextDue);
-                            bContinue = true;
-                        }
-                    }
-                  
+                    
                     if (bContinue)
                         continue;
 
@@ -148,7 +131,7 @@ namespace PostTestsService
                             if (postTestNextDue.NextDueDate != null)
                             {
                                 tsDayWindow = postTestNextDue.NextDueDate.Value - DateTime.Now;
-                                if (tsDayWindow.Days > 0)
+                                if (tsDayWindow.Days >= 0)
                                 {
                                     si.SiteEmailLists.DueList.Add(postTestNextDue);
                                     postTestNextDue.IsOkForList = true;
@@ -172,7 +155,7 @@ namespace PostTestsService
                                     //post tests have expired
                                     si.SiteEmailLists.ExpiredList.Add(postTestNextDue);
                                     //send new user email
-                                    body = EmailBodies.PostTestsExpiredStaff(postTestNextDue.TestsNotCompleted, postTestNextDue.NextDueDate.Value);
+                                    body = EmailBodies.PostTestsExpiredStaff(postTestNextDue.TestsNotCompleted);
                                     to = new[] { postTestNextDue.Email };
 
                                     subject = "Please Read: Your HALF-PINT Training Has Expired - site:" + si.Name;
@@ -348,22 +331,7 @@ namespace PostTestsService
             const string newLine = "<br/>";
             
             sbBody.Append(newLine);
-            if (siteEmailLists.DueList.Count == 0)
-                sbBody.Append("<h3>There are no staff members due to take their annual post tests.</h3>");
-            else
-            {
-                var dueSortedList = siteEmailLists.DueList.OrderBy(x => x.NextDueDate).ToList();
-                sbBody.Append("<h3>The following staff members are due to take their annual post tests.</h3>");
-
-                sbBody.Append("<table style='border-collapse:collapse;' cellpadding='5' border='1'><tr style='background-color:87CEEB'><th>Name</th><th>Due Date</th><th>Email</th></tr>");
-                foreach (var ptnd in dueSortedList)
-                {
-                    sbBody.Append("<tr><td>" + ptnd.Name + "</td><td>" + ptnd.SNextDueDate + "</td><td>" + ptnd.Email +
-                                  "</td></tr>");
-                }
-                sbBody.Append("</table>");
-            }
-
+            
             if (siteEmailLists.CompetencyMissingList.Count == 0)
                 sbBody.Append("<h3>All staff members have completed threir competency tests.</h3>");
             else
@@ -420,6 +388,54 @@ namespace PostTestsService
                     sbBody.Append("<tr><td>" + ptnd.Name + "</td><td>" + email + "</td></tr>");
                 }
                 sbBody.Append("</table></div>");
+            }
+
+            if (siteEmailLists.NewStaffList.Count == 0)
+            {}
+            else
+            {
+                var newSortedList = siteEmailLists.NewStaffList.OrderBy(x => x.NextDueDate).ToList();
+                sbBody.Append("<h3>The following new staff members have not completed their annual post tests.</h3>");
+
+                sbBody.Append("<table style='border-collapse:collapse;' cellpadding='5' border='1'><tr style='background-color:87CEEB'><th>Name</th><th>Due Date</th><th>Email</th></tr>");
+                foreach (var ptnd in newSortedList)
+                {
+                    sbBody.Append("<tr><td>" + ptnd.Name + "</td><td>" + ptnd.SNextDueDate + "</td><td>" + ptnd.Email +
+                                  "</td></tr>");
+                }
+                sbBody.Append("</table>");
+            }
+
+            if (siteEmailLists.ExpiredList.Count == 0)
+            { }
+            else
+            {
+                var expiredSortedList = siteEmailLists.ExpiredList.OrderBy(x => x.NextDueDate).ToList();
+                sbBody.Append("<h3>The following expired staff members have not completed their annual post tests.</h3>");
+
+                sbBody.Append("<table style='border-collapse:collapse;' cellpadding='5' border='1'><tr style='background-color:87CEEB'><th>Name</th><th>Due Date</th><th>Email</th></tr>");
+                foreach (var ptnd in expiredSortedList)
+                {
+                    sbBody.Append("<tr><td>" + ptnd.Name + "</td><td>" + ptnd.SNextDueDate + "</td><td>" + ptnd.Email +
+                                  "</td></tr>");
+                }
+                sbBody.Append("</table>");
+            }
+
+            if (siteEmailLists.DueList.Count == 0)
+                sbBody.Append("<h3>There are no staff members due to take their annual post tests.</h3>");
+            else
+            {
+                var dueSortedList = siteEmailLists.DueList.OrderBy(x => x.NextDueDate).ToList();
+                sbBody.Append("<h3>The following staff members are due to take their annual post tests.</h3>");
+
+                sbBody.Append("<table style='border-collapse:collapse;' cellpadding='5' border='1'><tr style='background-color:87CEEB'><th>Name</th><th>Due Date</th><th>Email</th></tr>");
+                foreach (var ptnd in dueSortedList)
+                {
+                    sbBody.Append("<tr><td>" + ptnd.Name + "</td><td>" + ptnd.SNextDueDate + "</td><td>" + ptnd.Email +
+                                  "</td></tr>");
+                }
+                sbBody.Append("</table>");
             }
 
             if(siteEmailLists.StaffTestsNotCompletedList.Count>0)
@@ -651,94 +667,94 @@ namespace PostTestsService
             return sil;
         }
 
-        static IEnumerable<StaffTestsNotCompletedList> GetStaffPostTestCompleted(int siteId)
-        {
-            var tncll = new List<StaffTestsNotCompletedList>();
-            //bool anyTestsNotCompleted = false;
-            bool isFirstOne = true;
+        //static IEnumerable<StaffTestsNotCompletedList> GetStaffPostTestCompleted(int siteId)
+        //{
+        //    var tncll = new List<StaffTestsNotCompletedList>();
+        //    //bool anyTestsNotCompleted = false;
+        //    bool isFirstOne = true;
 
-            String strConn = ConfigurationManager.ConnectionStrings["Halfpint"].ToString();
-            using (var conn = new SqlConnection(strConn))
-            {
-                try
-                {
-                    var cmd = new SqlCommand("", conn)
-                                  {
-                                      CommandType = System.Data.CommandType.StoredProcedure,
-                                      CommandText = ("GetStaffPostTestsCompleted")
-                                  };
-                    var param = new SqlParameter("@siteID", siteId);
-                    cmd.Parameters.Add(param);
+        //    String strConn = ConfigurationManager.ConnectionStrings["Halfpint"].ToString();
+        //    using (var conn = new SqlConnection(strConn))
+        //    {
+        //        try
+        //        {
+        //            var cmd = new SqlCommand("", conn)
+        //                          {
+        //                              CommandType = System.Data.CommandType.StoredProcedure,
+        //                              CommandText = ("GetStaffPostTestsCompleted")
+        //                          };
+        //            var param = new SqlParameter("@siteID", siteId);
+        //            cmd.Parameters.Add(param);
 
-                    conn.Open();
+        //            conn.Open();
 
-                    var rdr = cmd.ExecuteReader();
+        //            var rdr = cmd.ExecuteReader();
                     
-                    var staffId = 0;
-                    var tncl = new StaffTestsNotCompletedList();
-                    while (rdr.Read())
-                    {
-                        int pos = rdr.GetOrdinal("ID");
-                        int id = rdr.GetInt32(pos);
+        //            var staffId = 0;
+        //            var tncl = new StaffTestsNotCompletedList();
+        //            while (rdr.Read())
+        //            {
+        //                int pos = rdr.GetOrdinal("ID");
+        //                int id = rdr.GetInt32(pos);
 
-                        if(staffId != id)
-                        {
-                            if (isFirstOne)
-                                isFirstOne = false;
-                            else
-                            {
-                                if(tncl.TestsNotCompleted.Count> 0)
-                                    tncll.Add(tncl);        
-                            }
-                            tncl = new StaffTestsNotCompletedList {StaffId = id};
-                            staffId = id;
+        //                if(staffId != id)
+        //                {
+        //                    if (isFirstOne)
+        //                        isFirstOne = false;
+        //                    else
+        //                    {
+        //                        if(tncl.TestsNotCompleted.Count> 0)
+        //                            tncll.Add(tncl);        
+        //                    }
+        //                    tncl = new StaffTestsNotCompletedList {StaffId = id};
+        //                    staffId = id;
 
-                            pos = rdr.GetOrdinal("Email");
-                            if(!rdr.IsDBNull(pos))
-                                tncl.Email = rdr.GetString(pos);
+        //                    pos = rdr.GetOrdinal("Email");
+        //                    if(!rdr.IsDBNull(pos))
+        //                        tncl.Email = rdr.GetString(pos);
 
-                            string lastName = "";
-                            pos = rdr.GetOrdinal("LastName");
-                            if(!rdr.IsDBNull(pos))
-                                lastName = rdr.GetString(pos);
-                            string firstName = "";
-                            pos = rdr.GetOrdinal("FirstName");
-                            if (!rdr.IsDBNull(pos))
-                                firstName = rdr.GetString(pos);
-                            tncl.StaffName = lastName + ", " + firstName;
-                        }
+        //                    string lastName = "";
+        //                    pos = rdr.GetOrdinal("LastName");
+        //                    if(!rdr.IsDBNull(pos))
+        //                        lastName = rdr.GetString(pos);
+        //                    string firstName = "";
+        //                    pos = rdr.GetOrdinal("FirstName");
+        //                    if (!rdr.IsDBNull(pos))
+        //                        firstName = rdr.GetString(pos);
+        //                    tncl.StaffName = lastName + ", " + firstName;
+        //                }
                             
                         
-                        pos = rdr.GetOrdinal("IsCurrent");
-                        if (rdr.IsDBNull(pos))
-                            continue;
+        //                pos = rdr.GetOrdinal("IsCurrent");
+        //                if (rdr.IsDBNull(pos))
+        //                    continue;
 
-                        bool isCurrent = rdr.GetBoolean(pos);
+        //                bool isCurrent = rdr.GetBoolean(pos);
 
-                        if(isCurrent)
-                        {
-                            pos = rdr.GetOrdinal("TestName");
-                            string test = rdr.GetString(pos);
-                            tncl.TestsNotCompleted.Remove(test);  
-                        }
+        //                if(isCurrent)
+        //                {
+        //                    pos = rdr.GetOrdinal("TestName");
+        //                    string test = rdr.GetString(pos);
+        //                    tncl.TestsNotCompleted.Remove(test);  
+        //                }
 
-                    }
-                    //capture the last one
-                    if (staffId > 0)
-                    {
-                        if (tncl.TestsNotCompleted.Count > 0)
-                            tncll.Add(tncl);
-                    }
-                    rdr.Close();
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error(ex);
-                    return null;
-                }
-            }
-            return tncll;
-        }
+        //            }
+        //            //capture the last one
+        //            if (staffId > 0)
+        //            {
+        //                if (tncl.TestsNotCompleted.Count > 0)
+        //                    tncll.Add(tncl);
+        //            }
+        //            rdr.Close();
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            Logger.Error(ex);
+        //            return null;
+        //        }
+        //    }
+        //    return tncll;
+        //}
 
         static List<PostTestNextDue> GetAllStaffPostTestsCompleted(int siteId)
         {
@@ -1053,78 +1069,78 @@ namespace PostTestsService
             sw.Close();
         }
 
-        static List<NovaNetColumns> GetNovaNetFile(string site)
-        {
-            var folderPath = ConfigurationManager.AppSettings["StatStripListPath"];
-            var di = new DirectoryInfo(folderPath);
-            var files = di.EnumerateFiles();
-            var fileName = "";
+        //static List<NovaNetColumns> GetNovaNetFile(string site)
+        //{
+        //    var folderPath = ConfigurationManager.AppSettings["StatStripListPath"];
+        //    var di = new DirectoryInfo(folderPath);
+        //    var files = di.EnumerateFiles();
+        //    var fileName = "";
 
-            foreach (var file in files)
-            {
-                if (file.Name.StartsWith(site))
-                {
-                    fileName = file.Name;
-                    break;
-                }
-            }
-            if (fileName.Length == 0)
-                return null;
+        //    foreach (var file in files)
+        //    {
+        //        if (file.Name.StartsWith(site))
+        //        {
+        //            fileName = file.Name;
+        //            break;
+        //        }
+        //    }
+        //    if (fileName.Length == 0)
+        //        return null;
 
-            fileName = Path.Combine(folderPath, fileName);
-            var lines = new List<NovaNetColumns>();
-            var delimiters = new[] { ',' };
-            using (var reader = new StreamReader(fileName))
-            {
-                int count = 1;
-                while (true)
-                {
-                    var line = reader.ReadLine();
-                    if (line == null)
-                    {
-                        break;
-                    }
+        //    fileName = Path.Combine(folderPath, fileName);
+        //    var lines = new List<NovaNetColumns>();
+        //    var delimiters = new[] { ',' };
+        //    using (var reader = new StreamReader(fileName))
+        //    {
+        //        int count = 1;
+        //        while (true)
+        //        {
+        //            var line = reader.ReadLine();
+        //            if (line == null)
+        //            {
+        //                break;
+        //            }
 
-                    if (count == 1)
-                    {                        
-                        count = 2;
-                        continue;
-                    }
-                    var cols = new NovaNetColumns();
-                    var parts = line.Split(delimiters);
+        //            if (count == 1)
+        //            {                        
+        //                count = 2;
+        //                continue;
+        //            }
+        //            var cols = new NovaNetColumns();
+        //            var parts = line.Split(delimiters);
 
-                    cols.LastName = parts[0];
-                    cols.FirstName = parts[1];
-                    cols.Col3 = parts[2];
-                    cols.Col4 = parts[3];
-                    cols.Col5 = parts[4];
+        //            cols.LastName = parts[0];
+        //            cols.FirstName = parts[1];
+        //            cols.Col3 = parts[2];
+        //            cols.Col4 = parts[3];
+        //            cols.Col5 = parts[4];
 
-                    string empId = parts[5];
-                    switch(site)
-                    {
-                        case "CHB":
-                            if (empId.Length < 6)
-                            {
-                                var add = 6 - empId.Length;
-                                for (var i = 0; i < add; i++)
-                                    empId = "0" + empId;                                    
-                            }
+        //            string empId = parts[5];
+        //            switch(site)
+        //            {
+        //                case "CHB":
+        //                    if (empId.Length < 6)
+        //                    {
+        //                        var add = 6 - empId.Length;
+        //                        for (var i = 0; i < add; i++)
+        //                            empId = "0" + empId;                                    
+        //                    }
                                     
-                            break;
-                    }
-                    cols.EmployeeId = empId;
-                    cols.Col7 = parts[6];
-                    cols.Col8 = parts[7];
-                    cols.Col9 = parts[8];
-                    cols.StartDate = parts[9];
-                    cols.EndDate = parts[10];
+        //                    break;
+        //            }
+        //            cols.EmployeeId = empId;
+        //            cols.Col7 = parts[6];
+        //            cols.Col8 = parts[7];
+        //            cols.Col9 = parts[8];
+        //            cols.StartDate = parts[9];
+        //            cols.EndDate = parts[10];
 
-                    lines.Add(cols);
-                    // Console.WriteLine("{0} field(s)", parts.Length);
-                }
-            }
-            return lines;
-        }
+        //            lines.Add(cols);
+        //            // Console.WriteLine("{0} field(s)", parts.Length);
+        //        }
+        //    }
+        //    return lines;
+        //}
 
         //public static List<PostTest> GetStaffPostTestsCompletedCurrentAndActive(string staffId)
         //{
@@ -1290,7 +1306,7 @@ namespace PostTestsService
 
     public static class EmailBodies
     {
-        public static string PostTestsExpiredStaff(List<string> testsNotCompleted, DateTime dueDate)
+        public static string PostTestsExpiredStaff(List<string> testsNotCompleted)
         {
             var sb = new StringBuilder();
             sb.Append("<p>Hello. You are receiving this email because the post-tests you took for the HALF-PINT study have expired.  Please go to the study website and take the required post-tests when you have time. Though you can review the training videos if you would like, you are only required to complete the post-tests (containing 3-5 multiple-choice questions each).</p>");
@@ -1318,7 +1334,7 @@ namespace PostTestsService
             var sb = new StringBuilder();
             sb.Append("<p>Hello. You are receiving this email because at least one of the online tests you completed for the HALF-PINT study will expire soon.  Please go to the study website and take the required post-tests when you have time. Though you can review the training videos if you would like, you are only required to complete the post-tests (containing 3-5 multiple-choice questions each).</p>");
 
-            sb.Append("<p>You will receive automatic weekly email reminders until you have completed these post-tests. If you are not able to take these tests prior to the due date of <strong>" + dueDate.ToShortDateString() + ",</strong> you will be locked out of the Nova study glucometer. </p>");
+            sb.Append("<p>You will receive automatic weekly email reminders until you have completed these post-tests. If you are not able to take these tests prior to the due date of <strong>" + dueDate.AddDays(-1).ToShortDateString() + ",</strong> you will be locked out of the Nova study glucometer. </p>");
 
             sb.Append("<p>If you have any questions concerning this request, please contact the HALF-PINT Nurse Champion in your ICU, or the national study nurse, Kerry Coughlin-Wells (Kerry.Coughlin-Wells@childrens.harvard.edu). </p>");
 
