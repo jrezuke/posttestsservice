@@ -64,6 +64,7 @@ namespace PostTestsService
                                    {
                                        StaffId = postTestNextDue.Id,
                                        StaffName = postTestNextDue.Name,
+                                       Role = postTestNextDue.Role,
                                        TestsNotCompleted = postTestNextDue.TestsNotCompleted
                                    };
                     si.SiteEmailLists.StaffTestsNotCompletedList.Add(stnc);
@@ -442,15 +443,18 @@ namespace PostTestsService
             {
                 sbBody.Append("<h3>The following staff members have not completed all post tests.</h3>");
 
-                sbBody.Append("<div><table style='border-collapse:collapse;' cellpadding='5' border='1';><tr style='background-color:87CEEB'><th>Name</th><th>Email</th><th>Tests Not Completed</th></tr>");
+                sbBody.Append("<div><table style='border-collapse:collapse;' cellpadding='5' border='1';><tr style='background-color:87CEEB'><th>Name</th><th>Email</th><th>Role</th><th>Tests Not Completed</th></tr>");
                 foreach (var tncl in siteEmailLists.StaffTestsNotCompletedList)
                 {
+                    if (tncl.TestsNotCompleted.Count == 0)
+                        continue;
+
                     //sbBody.Append("<div>");
                     var email = "not entered";
                     if (tncl.Email != null)
                         email = tncl.Email;
                     
-                    sbBody.Append("<tr><td>" + tncl.StaffName + "</td><td>" + email + "</td><td>");
+                    sbBody.Append("<tr><td>" + tncl.StaffName + "</td><td>" + email + "</td><td>" + tncl.Role + "</td><td>");
                     
                     foreach (var test in tncl.TestsNotCompleted)
                     {
@@ -788,14 +792,16 @@ namespace PostTestsService
                     var role = String.Empty;
                     var bIsNew = true;
                     var testsCompleted = new List<string>();
+// ReSharper disable TooWideLocalVariableScope
+                    string curRole = null;
+// ReSharper restore TooWideLocalVariableScope
 
                     var rdr = cmd.ExecuteReader();
                     while (rdr.Read())
                     {
                         var pos = rdr.GetOrdinal("Role");
                         role = rdr.GetString(pos);
-
-
+                        
                         if (role == "Admin" )
                             continue;
 
@@ -823,7 +829,7 @@ namespace PostTestsService
                                                {
                                                    Id = curId,
                                                    Name = name,
-                                                   Role = role,
+                                                   Role = curRole,
                                                    Email = email,
                                                    EmployeeId = empId,
                                                    IsNovaNetTested = bNovaNetCompleted,
@@ -855,6 +861,7 @@ namespace PostTestsService
                             bIsNew = true;
                             email = null;
                             empId = null;
+                            curRole = role;
                             testsCompleted = new List<string>();
                         }
                         
@@ -1283,6 +1290,7 @@ namespace PostTestsService
         public int StaffId { get; set; }
         public string StaffName { get; set; }
         public string Email { get; set; }
+        public string Role { get; set; }
         public List<string> TestsNotCompleted { get; set; }
     }
     
