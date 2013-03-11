@@ -71,13 +71,26 @@ namespace PostTestsService
                     
                     var bContinue = false;
                     Console.WriteLine(postTestNextDue.Name + ":" + postTestNextDue.SNextDueDate + ", email: " + postTestNextDue.Email + ", Employee ID: " + postTestNextDue.EmployeeId + ", Role: " + postTestNextDue.Role);
-                    
-                    //make sure they are nova net certified
-                    if ((!postTestNextDue.IsNovaNetTested) || (!postTestNextDue.IsVampTested))
+
+                    if (postTestNextDue.Role != "Nurse")
                     {
-                        Logger.Info("Competency needed for " + postTestNextDue.Name);
-                        si.SiteEmailLists.CompetencyMissingList.Add(postTestNextDue);
-                        bContinue = true;
+                        //make sure they are nova net certified
+                        if (!postTestNextDue.IsNovaNetTested)
+                        {
+                            Logger.Info("NovaNet competency needed for " + postTestNextDue.Name);
+                            si.SiteEmailLists.CompetencyMissingList.Add(postTestNextDue);
+                            bContinue = true;
+                        }
+                    }
+                    else
+                    {
+                        //make sure they are nova net and vamp certified
+                        if ((!postTestNextDue.IsNovaNetTested) || (!postTestNextDue.IsVampTested))
+                        {
+                            Logger.Info("Competency needed for " + postTestNextDue.Name);
+                            si.SiteEmailLists.CompetencyMissingList.Add(postTestNextDue);
+                            bContinue = true;
+                        }
                     }
 
                     if ( string.IsNullOrEmpty(postTestNextDue.Email))
@@ -1222,15 +1235,15 @@ namespace PostTestsService
         //}
     }
 
-    //public class PostTest
-    //{
-    //    public int Id { get; set; }
-    //    public string Name { get; set; }
-    //    public string PathName { get; set; }
-    //    public DateTime? DateCompleted { get; set; }
-    //    public string sDateCompleted { get; set; }
-    //    public bool IsCompleted { get; set; }
-    //}
+    public class PostTest
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string PathName { get; set; }
+        public DateTime? DateCompleted { get; set; }
+        public string SDateCompleted { get; set; }
+        public bool IsCompleted { get; set; }
+    }
     
     public class SiteInfo
     {
@@ -1248,6 +1261,7 @@ namespace PostTestsService
         public PostTestNextDue()
         {
             TestsNotCompleted = Program.GetActiveRequiredTests(false);
+            TestsCompleted = new List<PostTest>();
         }
 
         public int Id { get; set; }
@@ -1261,7 +1275,8 @@ namespace PostTestsService
         public string Role { get; set; }
         public bool IsNew { get; set; }
         public bool IsOkForList { get; set; }
-        public List<String> TestsNotCompleted { get; set; } 
+        public List<String> TestsNotCompleted { get; set; }
+        public List<PostTest> TestsCompleted { get; set; } 
     }
 
     public class NovaNetColumns
