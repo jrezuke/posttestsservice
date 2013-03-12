@@ -54,12 +54,12 @@ namespace PostTestsService
                 
                 //Get staff info including next due date, tests not completed, is new staff - next due date will be 1 year from today for new staff
                 //staff roles not included are Admin, DCC , Nurse generic (nurse accounts with a user name)
-                si.PostTestNextDues = GetAllStaffPostTestsCompleted(si.Id); //GetPostTestPeopleFirstDateCompleted(si.Id);
+                si.PostTestNextDues = GetStaffPostTestsCompleted(si.Id); //GetPostTestPeopleFirstDateCompleted(si.Id);
                 
                 //iterate people                
                 foreach (var postTestNextDue in si.PostTestNextDues)
                 {
-                    //create staff tests not completed for email list to coordinators
+                    //creat the StaffTestsNotCompletedList email list to coordinators
                     var stnc = new StaffTestsNotCompletedList
                                    {
                                        StaffId = postTestNextDue.Id,
@@ -69,8 +69,8 @@ namespace PostTestsService
                                    };
                     si.SiteEmailLists.StaffTestsNotCompletedList.Add(stnc);
                     
-                    var bContinue = false;
-                    Console.WriteLine(postTestNextDue.Name + ":" + postTestNextDue.SNextDueDate + ", email: " + postTestNextDue.Email + ", Employee ID: " + postTestNextDue.EmployeeId + ", Role: " + postTestNextDue.Role);
+                    var bContinue = false;  
+                    Console.WriteLine(postTestNextDue.Name + ", email: " + postTestNextDue.Email + ", Employee ID: " + postTestNextDue.EmployeeId + ", Role: " + postTestNextDue.Role);
 
                     if (postTestNextDue.Role != "Nurse")
                     {
@@ -117,6 +117,54 @@ namespace PostTestsService
                     string body;
                     string[] to;
                         
+                    //see if all required post tests are completed
+                    if (postTestNextDue.TestsNotCompleted.Count > 0)
+                    {
+                        //check for any current tests that are becoming due
+                        foreach (var postTest in postTestNextDue.TestsCompleted)
+                        {
+                            //check to see if one of the tests is not current
+                            //if not current, this means that the staff member has less than 30 days to complete this test before it expires
+                            if (!postTest.IsCurrent)
+                            {
+                                continue;
+                            }
+
+                            var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
+                            tsDayWindow = nextDueDate - DateTime.Now;
+                            if (tsDayWindow.Days > 30)
+                            {
+                                //within the 30 day window
+                                //set the test as non-current so that the user can re-take the test
+                                var retVal = SetPostTestCompletedNotCurrent(postTest.PostTestCompletedId);
+                                Logger.Info("Test set IsCurrent=0: " + retVal);
+
+                                
+                            }
+                        }
+
+                    }
+                    else
+                    {
+                        //notify the staff member if any tests are going to expire within the next 30 days
+                        foreach (var postTest in postTestNextDue.TestsCompleted)
+                        {
+                            //check to see if one of the tests is not current
+                            //if not current, this means that the staff member has less than 30 days to complete this test before it expires
+                            if (!postTest.IsCurrent)
+                                SendStaffEmail(postTestNextDue);
+
+                            var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
+                            tsDayWindow = nextDueDate - DateTime.Now;
+                            if (tsDayWindow.Days <= 30)
+                            {
+                                
+                            }
+
+                        }
+                    }
+
+
                     //see if all required post tests are completed
                     if (postTestNextDue.TestsNotCompleted.Count > 0)
                     {
@@ -336,6 +384,15 @@ namespace PostTestsService
             }
             Console.Read();
         }
+
+        
+
+        private static void SendStaffEmail(PostTestNextDue postTestNextDue)
+        {
+            
+        }
+
+        
 
 
         internal static void SendCoordinatorsEmail(int site, string siteName, SiteEmailLists siteEmailLists, string path)
@@ -578,8 +635,8 @@ namespace PostTestsService
             }
             return memUsers;
         }
-
-        static int SetPostTestsCompletedIsCurrent(int id)
+        
+        static int SetPostTestCompletedNotCurrent(int id)
         {            
             String strConn = ConfigurationManager.ConnectionStrings["Halfpint"].ToString();
              using (var conn = new SqlConnection(strConn))
@@ -589,7 +646,7 @@ namespace PostTestsService
                     var cmd = new SqlCommand("", conn)
                                   {
                                       CommandType = System.Data.CommandType.StoredProcedure,
-                                      CommandText = "SetStaffPostTestsCompletedIsCurrent"
+                                      CommandText = "SetPostTestCompletedNotCurrent"
                                   };
 
                     var param = new SqlParameter("@id", id);
@@ -773,7 +830,7 @@ namespace PostTestsService
         //    return tncll;
         //}
 
-        static List<PostTestNextDue> GetAllStaffPostTestsCompleted(int siteId)
+        private static List<PostTestNextDue> GetStaffPostTestsCompleted(int siteId)
         {
             var ptndl = new List<PostTestNextDue>();
 
@@ -785,190 +842,126 @@ namespace PostTestsService
                     var cmd = new SqlCommand("", conn)
                                   {
                                       CommandType = System.Data.CommandType.StoredProcedure,
-                                      CommandText = ("GetStaffAllPostTestsDateCompletedBySite")
+                                      CommandText = ("GetStaffActiveInfoForSite")
                                   };
-                    var param = new SqlParameter("@siteID", siteId);
+                    var param = new SqlParameter("@siteId", siteId);
                     cmd.Parameters.Add(param);
 
                     conn.Open();
-
-                    var curId = 0;
-                    //string sMinDate = null;
-                    string name = null;
-                    string email = null;
-                    string empId = null;
-
-                    DateTime? lastCompleteDate = null;
-                    //var bHasCompleteDate = false;
-                    var bVampCompleted = false;
-                    var bNovaNetCompleted = false;
-                    var role = String.Empty;
-                    var bIsNew = true;
-                    var testsCompleted = new List<string>();
-// ReSharper disable TooWideLocalVariableScope
-                    string curRole = null;
-// ReSharper restore TooWideLocalVariableScope
-
                     var rdr = cmd.ExecuteReader();
                     while (rdr.Read())
                     {
                         var pos = rdr.GetOrdinal("Role");
-                        role = rdr.GetString(pos);
+                        var role = rdr.GetString(pos);
                         
-                        if (role == "Admin" )
+                        if (role == "Admin")
                             continue;
 
                         var userName = string.Empty;
                         pos = rdr.GetOrdinal("UserName");
-                        if(!rdr.IsDBNull(pos))
+                        
+                        if (!rdr.IsDBNull(pos))
                             userName = rdr.GetString(pos);
 
                         //skip generic roles
                         if (role == "Nurse" || role == "DCC")
                         {
-                            if(userName !=  string.Empty)
+                            if (userName != string.Empty)
                                 continue;
                         }
-                        
+
+                        var ptnd = new PostTestNextDue {Role = role};
+
                         pos = rdr.GetOrdinal("ID");
-                        var iD = rdr.GetInt32(pos);
-                        
-                        if (iD != curId)
-                        {
-                            //add to list if current id changes
-                            if (curId != 0)
-                            {
-                                var ptnd = new PostTestNextDue
-                                               {
-                                                   Id = curId,
-                                                   Name = name,
-                                                   Role = curRole,
-                                                   Email = email,
-                                                   EmployeeId = empId,
-                                                   IsNovaNetTested = bNovaNetCompleted,
-                                                   IsVampTested = bVampCompleted
-                                               };
-                                //if (bHasCompleteDate)
-                                if(lastCompleteDate != null)
-                                {
-                                    //ptnd.NextDueDate = minDueDate.AddYears(1);
-                                    ptnd.NextDueDate = lastCompleteDate.Value.AddYears(1);
-                                    ptnd.SNextDueDate = ptnd.NextDueDate.Value.ToString("MM/dd/yyyy");
-                                }
-                                ptnd.IsNew = bIsNew;
+                        ptnd.Id = rdr.GetInt32(pos);
 
-                                foreach (var test in testsCompleted)
-                                {
-                                    ptnd.TestsNotCompleted.Remove(test);
-                                }
-                                if (!bIsNew)
-                                    ptnd.TestsNotCompleted.Remove("Overview");
-
-                                ptndl.Add(ptnd);
-                            }
-                            curId = iD;
-                            //minDueDate = DateTime.Parse("01/01/2100");
-                            //bHasCompleteDate = false;
-                            bVampCompleted = false;
-                            bNovaNetCompleted = false;
-                            bIsNew = true;
-                            email = null;
-                            empId = null;
-                            curRole = role;
-                            testsCompleted = new List<string>();
-                        }
-                        
                         pos = rdr.GetOrdinal("Name");
-                        name = rdr.GetString(pos);
-
-                        var bIsCurrent = false;
-                        pos = rdr.GetOrdinal("IsCurrent");
-                        if (rdr.IsDBNull(pos))
-                            bIsNew = true;
-                        else
-                        {
-                            bIsCurrent = rdr.GetBoolean(pos);
-                            if (!bIsCurrent)
-                                bIsNew = false;
-                        }
-                        
-                        pos = rdr.GetOrdinal("DateCompleted");
-                        if (!rdr.IsDBNull(pos))
-                        {
-                            lastCompleteDate = rdr.GetDateTime(pos);
-                            //bHasCompleteDate = true;
-                            //var nextDueDate = rdr.GetDateTime(pos);
-                            //if (nextDueDate.CompareTo(minDueDate) < 0)
-                            //    minDueDate = nextDueDate;
-                            //SNextDueDate = ptnd.NextDueDate.ToString("MM/dd/yyyy");
-                        }
-
-                        if (bIsCurrent)
-                        {
-                            //get the test name completed and remove it from the tests not completed list
-                            pos = rdr.GetOrdinal("TestName");
-                            if (!rdr.IsDBNull(pos))
-                                testsCompleted.Add(rdr.GetString(pos));
-                        }
+                        ptnd.Name = rdr.GetString(pos);
 
                         pos = rdr.GetOrdinal("Email");
-                        if (!rdr.IsDBNull(pos))
-                        {
-                            email = rdr.GetString(pos);
-                        }
+                        if(! rdr.IsDBNull(pos))
+                            ptnd.Email = rdr.GetString(pos);
 
                         pos = rdr.GetOrdinal("EmployeeID");
                         if (!rdr.IsDBNull(pos))
-                        {
-                            empId = rdr.GetString(pos);
-                        }
+                            ptnd.EmployeeId = rdr.GetString(pos);
 
                         pos = rdr.GetOrdinal("NovaStatStrip");
                         if (!rdr.IsDBNull(pos))
                         {
-                            bNovaNetCompleted = rdr.GetBoolean(pos);
+                            ptnd.IsNovaNetTested = rdr.GetBoolean(pos);
                         }
 
                         pos = rdr.GetOrdinal("Vamp");
                         if (!rdr.IsDBNull(pos))
                         {
-                            bVampCompleted = rdr.GetBoolean(pos);
+                            ptnd.IsVampTested = rdr.GetBoolean(pos);
                         }
-                        
-                    }
-                    rdr.Close();
-                    
-                    //add the last staff
-                    if (curId != 0)
-                    {
-                        var ptnd = new PostTestNextDue
-                                       {
-                                           Id = curId,
-                                           Name = name,
-                                           Role = role,
-                                           Email = email,
-                                           EmployeeId = empId,
-                                           IsNovaNetTested = bNovaNetCompleted,
-                                           IsVampTested = bVampCompleted,
-                                           IsNew = bIsNew
-                                       };
-                        //if (bHasCompleteDate)
-                        if(lastCompleteDate != null)
-                        {
-                            //ptnd.NextDueDate = minDueDate.AddYears(1);
-                            ptnd.NextDueDate = lastCompleteDate.Value.AddYears(1);
-                            ptnd.SNextDueDate = ptnd.NextDueDate.Value.ToString("MM/dd/yyyy");
-                        }
-
-                        foreach (var test in testsCompleted)
-                        {
-                            ptnd.TestsNotCompleted.Remove(test);
-                        }
-                        if (!bIsNew)
-                            ptnd.TestsNotCompleted.Remove("Overview");
 
                         ptndl.Add(ptnd);
                     }
+                    rdr.Close();
+                    conn.Close();
+
+                    foreach (var ptnd in ptndl)
+                    {
+                        cmd = new SqlCommand("", conn)
+                        {
+                            CommandType = System.Data.CommandType.StoredProcedure,
+                            CommandText = ("GetPostTestsCompletedForStaffMember")
+                        };
+                        param = new SqlParameter("@staffId", ptnd.Id);
+                        cmd.Parameters.Add(param);
+
+                        conn.Open();
+                        rdr = cmd.ExecuteReader();
+                        
+                        while (rdr.Read())
+                        {
+                            var postTest = new PostTest();
+
+                            var pos = rdr.GetOrdinal("ID");
+                            postTest.PostTestCompletedId = rdr.GetInt32(pos);
+
+                            pos = rdr.GetOrdinal("TestID");
+                            postTest.Id = rdr.GetInt32(pos);
+
+                            pos = rdr.GetOrdinal("TestName");
+                            postTest.Name = rdr.GetString(pos);
+                            
+                            pos = rdr.GetOrdinal("DateCompleted");
+                            postTest.DateCompleted = rdr.GetDateTime(pos);
+
+                            pos = rdr.GetOrdinal("IsCurrent");
+                            postTest.IsCurrent = rdr.GetBoolean(pos);
+
+                            //remove this from the tests not completed list
+                            ptnd.TestsNotCompleted.Remove(postTest.Name);
+
+                            ptnd.TestsCompleted.Add(postTest);
+                        }
+                        rdr.Close();
+                        conn.Close();
+
+                        cmd = new SqlCommand("", conn)
+                        {
+                            CommandType = System.Data.CommandType.StoredProcedure,
+                            CommandText = ("IsStaffMemberPostTestsNew")
+                        };
+                        param = new SqlParameter("@staffId", ptnd.Id);
+                        cmd.Parameters.Add(param);
+                        conn.Open();
+                        var count = (int)cmd.ExecuteScalar();
+                        ptnd.IsNew = count <= 0;
+
+                        if (! ptnd.IsNew)
+                        {
+                            if (ptnd.TestsNotCompleted.Contains("Overview"))
+                                ptnd.TestsNotCompleted.Remove("Overview");
+                        }
+                        conn.Close();
+                    }
+
                 }
                 catch (Exception ex)
                 {
@@ -976,8 +969,215 @@ namespace PostTestsService
                     return null;
                 }
             }
+
             return ptndl;
         }
+
+//        static List<PostTestNextDue> GetAllStaffPostTestsCompleted(int siteId)
+//        {
+//            var ptndl = new List<PostTestNextDue>();
+
+//            var strConn = ConfigurationManager.ConnectionStrings["Halfpint"].ToString();
+//            using (var conn = new SqlConnection(strConn))
+//            {
+//                try
+//                {
+//                    var cmd = new SqlCommand("", conn)
+//                                  {
+//                                      CommandType = System.Data.CommandType.StoredProcedure,
+//                                      CommandText = ("GetStaffAllPostTestsDateCompletedBySite")
+//                                  };
+//                    var param = new SqlParameter("@siteID", siteId);
+//                    cmd.Parameters.Add(param);
+
+//                    conn.Open();
+
+//                    var curId = 0;
+//                    //string sMinDate = null;
+//                    string name = null;
+//                    string email = null;
+//                    string empId = null;
+
+//                    DateTime? lastCompleteDate = null;
+//                    //var bHasCompleteDate = false;
+//                    var bVampCompleted = false;
+//                    var bNovaNetCompleted = false;
+//                    var role = String.Empty;
+//                    var bIsNew = true;
+//                    var testsCompleted = new List<string>();
+//// ReSharper disable TooWideLocalVariableScope
+//                    string curRole = null;
+//// ReSharper restore TooWideLocalVariableScope
+
+//                    var rdr = cmd.ExecuteReader();
+//                    while (rdr.Read())
+//                    {
+//                        var pos = rdr.GetOrdinal("Role");
+//                        role = rdr.GetString(pos);
+                        
+//                        if (role == "Admin" )
+//                            continue;
+
+//                        var userName = string.Empty;
+//                        pos = rdr.GetOrdinal("UserName");
+//                        if(!rdr.IsDBNull(pos))
+//                            userName = rdr.GetString(pos);
+
+//                        //skip generic roles
+//                        if (role == "Nurse" || role == "DCC")
+//                        {
+//                            if(userName !=  string.Empty)
+//                                continue;
+//                        }
+                        
+//                        pos = rdr.GetOrdinal("ID");
+//                        var iD = rdr.GetInt32(pos);
+                        
+//                        if (iD != curId)
+//                        {
+//                            //add to list if current id changes
+//                            if (curId != 0)
+//                            {
+//                                var ptnd = new PostTestNextDue
+//                                               {
+//                                                   Id = curId,
+//                                                   Name = name,
+//                                                   Role = curRole,
+//                                                   Email = email,
+//                                                   EmployeeId = empId,
+//                                                   IsNovaNetTested = bNovaNetCompleted,
+//                                                   IsVampTested = bVampCompleted
+//                                               };
+//                                //if (bHasCompleteDate)
+//                                if(lastCompleteDate != null)
+//                                {
+//                                    //ptnd.NextDueDate = minDueDate.AddYears(1);
+//                                    ptnd.NextDueDate = lastCompleteDate.Value.AddYears(1);
+//                                    ptnd.SNextDueDate = ptnd.NextDueDate.Value.ToString("MM/dd/yyyy");
+//                                }
+//                                ptnd.IsNew = bIsNew;
+
+//                                foreach (var test in testsCompleted)
+//                                {
+//                                    ptnd.TestsNotCompleted.Remove(test);
+//                                }
+//                                if (!bIsNew)
+//                                    ptnd.TestsNotCompleted.Remove("Overview");
+
+//                                ptndl.Add(ptnd);
+//                            }
+//                            curId = iD;
+//                            //minDueDate = DateTime.Parse("01/01/2100");
+//                            //bHasCompleteDate = false;
+//                            bVampCompleted = false;
+//                            bNovaNetCompleted = false;
+//                            bIsNew = true;
+//                            email = null;
+//                            empId = null;
+//                            curRole = role;
+//                            testsCompleted = new List<string>();
+//                        }
+                        
+//                        pos = rdr.GetOrdinal("Name");
+//                        name = rdr.GetString(pos);
+
+//                        var bIsCurrent = false;
+//                        pos = rdr.GetOrdinal("IsCurrent");
+//                        if (rdr.IsDBNull(pos))
+//                            bIsNew = true;
+//                        else
+//                        {
+//                            bIsCurrent = rdr.GetBoolean(pos);
+//                            if (!bIsCurrent)
+//                                bIsNew = false;
+//                        }
+                        
+//                        pos = rdr.GetOrdinal("DateCompleted");
+//                        if (!rdr.IsDBNull(pos))
+//                        {
+//                            lastCompleteDate = rdr.GetDateTime(pos);
+//                            //bHasCompleteDate = true;
+//                            //var nextDueDate = rdr.GetDateTime(pos);
+//                            //if (nextDueDate.CompareTo(minDueDate) < 0)
+//                            //    minDueDate = nextDueDate;
+//                            //SNextDueDate = ptnd.NextDueDate.ToString("MM/dd/yyyy");
+//                        }
+
+//                        if (bIsCurrent)
+//                        {
+//                            //get the test name completed and remove it from the tests not completed list
+//                            pos = rdr.GetOrdinal("TestName");
+//                            if (!rdr.IsDBNull(pos))
+//                                testsCompleted.Add(rdr.GetString(pos));
+//                        }
+
+//                        pos = rdr.GetOrdinal("Email");
+//                        if (!rdr.IsDBNull(pos))
+//                        {
+//                            email = rdr.GetString(pos);
+//                        }
+
+//                        pos = rdr.GetOrdinal("EmployeeID");
+//                        if (!rdr.IsDBNull(pos))
+//                        {
+//                            empId = rdr.GetString(pos);
+//                        }
+
+//                        pos = rdr.GetOrdinal("NovaStatStrip");
+//                        if (!rdr.IsDBNull(pos))
+//                        {
+//                            bNovaNetCompleted = rdr.GetBoolean(pos);
+//                        }
+
+//                        pos = rdr.GetOrdinal("Vamp");
+//                        if (!rdr.IsDBNull(pos))
+//                        {
+//                            bVampCompleted = rdr.GetBoolean(pos);
+//                        }
+                        
+//                    }
+//                    rdr.Close();
+                    
+//                    //add the last staff
+//                    if (curId != 0)
+//                    {
+//                        var ptnd = new PostTestNextDue
+//                                       {
+//                                           Id = curId,
+//                                           Name = name,
+//                                           Role = role,
+//                                           Email = email,
+//                                           EmployeeId = empId,
+//                                           IsNovaNetTested = bNovaNetCompleted,
+//                                           IsVampTested = bVampCompleted,
+//                                           IsNew = bIsNew
+//                                       };
+//                        //if (bHasCompleteDate)
+//                        if(lastCompleteDate != null)
+//                        {
+//                            //ptnd.NextDueDate = minDueDate.AddYears(1);
+//                            ptnd.NextDueDate = lastCompleteDate.Value.AddYears(1);
+//                            ptnd.SNextDueDate = ptnd.NextDueDate.Value.ToString("MM/dd/yyyy");
+//                        }
+
+//                        foreach (var test in testsCompleted)
+//                        {
+//                            ptnd.TestsNotCompleted.Remove(test);
+//                        }
+//                        if (!bIsNew)
+//                            ptnd.TestsNotCompleted.Remove("Overview");
+
+//                        ptndl.Add(ptnd);
+//                    }
+//                }
+//                catch (Exception ex)
+//                {
+//                    Logger.Error(ex);
+//                    return null;
+//                }
+//            }
+//            return ptndl;
+//        }
 
         //static IEnumerable<PostTestNextDue> GetPostTestPeopleFirstDateCompleted(int siteId)
         //{
@@ -1237,12 +1437,13 @@ namespace PostTestsService
 
     public class PostTest
     {
+        public int PostTestCompletedId { get; set; }
         public int Id { get; set; }
         public string Name { get; set; }
         public string PathName { get; set; }
         public DateTime? DateCompleted { get; set; }
         public string SDateCompleted { get; set; }
-        public bool IsCompleted { get; set; }
+        public bool IsCurrent { get; set; }
     }
     
     public class SiteInfo
