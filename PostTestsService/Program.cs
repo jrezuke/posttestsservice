@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data.SqlClient;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using NLog;
@@ -29,6 +30,11 @@ namespace PostTestsService
             
             var path = AppDomain.CurrentDomain.BaseDirectory;
             
+            //set is current is false for expired post tests
+            //it's possible that this program could miss setting expired post tests is current
+            //this will make sure
+            SetPostTestsExpiredNotCurrent();
+
             //get sites 
             var sites = GetSites();
 
@@ -133,141 +139,94 @@ namespace PostTestsService
                             var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
                             tsDayWindow = nextDueDate - DateTime.Now;
                             if (tsDayWindow.Days > 30)
-                            {
-                                //within the 30 day window
-                                //set the test as non-current so that the user can re-take the test
-                                var retVal = SetPostTestCompletedNotCurrent(postTest.PostTestCompletedId);
-                                Logger.Info("Test set IsCurrent=0: " + retVal);
-
-                                
-                            }
+                                continue;
+                            
+                            //within the 30 day window
+                            //set the test as non-current so that the user can re-take the test
+                            var retVal = SetPostTestCompletedNotCurrent(postTest.PostTestCompletedId);
+                            Logger.Info("Test " + postTest.Name + " , date completed:" + postTest.DateCompleted.Value.ToShortDateString() + " set IsCurrent=0: " + retVal);
+                            
                         }
-
-                    }
-                    else
-                    {
-                        //notify the staff member if any tests are going to expire within the next 30 days
-                        foreach (var postTest in postTestNextDue.TestsCompleted)
-                        {
-                            //check to see if one of the tests is not current
-                            //if not current, this means that the staff member has less than 30 days to complete this test before it expires
-                            if (!postTest.IsCurrent)
-                                SendStaffEmail(postTestNextDue);
-
-                            var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
-                            tsDayWindow = nextDueDate - DateTime.Now;
-                            if (tsDayWindow.Days <= 30)
-                            {
-                                
-                            }
-
-                        }
-                    }
-
-
-                    //see if all required post tests are completed
-                    if (postTestNextDue.TestsNotCompleted.Count > 0)
-                    {
-                        //send email notification to user
                         if (postTestNextDue.IsNew)
                         {
                             si.SiteEmailLists.NewStaffList.Add(postTestNextDue);
                             //send new user email
-                            body = EmailBodies.PostTestsDueNewStaff(postTestNextDue.TestsNotCompleted);
-                            to = new[] {postTestNextDue.Email};
+                            body = EmailBodies.PostTestsDueNewStaff(postTestNextDue.TestsNotCompleted, postTestNextDue.TestsCompleted);
+                            to = new[] { postTestNextDue.Email };
 
-                            subject = "Please Read: Please Complete the Online HALF-PINT Post-Tests - site:" + si.Name;
-                            //var body = "Your annual halpint post tests are now available at the link below.  Please complete the required tests as soon as possible.";
+                            subject = string.Format("Please Read: Please Complete the Online HALF-PINT Post-Tests - site:{0}", si.Name);
 
                             //if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
                             //{
                             if (_bSendEmails)
                                 SendHtmlEmail(subject, to, null, body, path,
                                               @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
-                            //}
                         }
                         else
                         {
-                            //staff that were 
-                            //check to see if they are within the 30 day window
-                            if (postTestNextDue.NextDueDate != null)
-                            {
-                                tsDayWindow = postTestNextDue.NextDueDate.Value - DateTime.Now;
-                                if (tsDayWindow.Days >= 0)
-                                {
-                                    si.SiteEmailLists.DueList.Add(postTestNextDue);
-                                    postTestNextDue.IsOkForList = true;
-                                    
-                                    //send new user email
-                                    //postTestNextDue.TestsNotCompleted = GetActiveRequiredTests(true);
-                                    body = EmailBodies.PostTestsDueStaff(postTestNextDue.TestsNotCompleted, postTestNextDue.NextDueDate.Value);
-                                    to = new[] { postTestNextDue.Email };
+                            si.SiteEmailLists.ExpiredList.Add(postTestNextDue);
+                            //send new user email
+                            body = EmailBodies.PostTestsExpiredStaff(postTestNextDue.TestsNotCompleted, postTestNextDue.TestsCompleted);
+                            to = new[] { postTestNextDue.Email };
 
-                                    subject = "Please Read: Your HALF-PINT Training is About to Expire - site:" + si.Name;
-                                    
-                                    //if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
-                                    //{
-                                    if (_bSendEmails)
-                                        SendHtmlEmail(subject, to, null, body, path,
-                                                      @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
-                                    //}
-                                }
-                                else
-                                {
-                                    //post tests have expired
-                                    si.SiteEmailLists.ExpiredList.Add(postTestNextDue);
-                                    //send new user email
-                                    body = EmailBodies.PostTestsExpiredStaff(postTestNextDue.TestsNotCompleted);
-                                    to = new[] { postTestNextDue.Email };
+                            subject = "Please Read: Your HALF-PINT Training Has Expired - site:" + si.Name;
 
-                                    subject = "Please Read: Your HALF-PINT Training Has Expired - site:" + si.Name;
+                            //if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                            //{
+                            if (_bSendEmails)
+                                SendHtmlEmail(subject, to, null, body, path,
+                                              @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                            
+                        }
 
-                                    //if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
-                                    //{
-                                    if (_bSendEmails)
-                                        SendHtmlEmail(subject, to, null, body, path,
-                                                      @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
-                                    //}
+                    }
+                    else
+                    {
+                        postTestNextDue.IsOkForList = true;
+                        var bIsDue = false;
 
-                                }
-                            }
+                        //notify the staff member if any tests are going to expire within the next 30 days
+                        foreach (var postTest in postTestNextDue.TestsCompleted)
+                        {
+                            //check to see if one of the tests is not current - this shouldn't happen
+                            //if not current, this means that the staff member has less than 30 days to complete this test before it expires
+                            if (!postTest.IsCurrent)
+                                bIsDue = true;
+
+                            var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
+                            tsDayWindow = nextDueDate - DateTime.Now;
+                            if (tsDayWindow.Days > 30)
+                                continue;
+
+                            //within the 30 day window
+                            //set the test as non-current so that the user can re-take the test
+                            var retVal = SetPostTestCompletedNotCurrent(postTest.PostTestCompletedId);
+                            Logger.Info("Test " + postTest.Name + " , date completed:" + postTest.DateCompleted.Value.ToShortDateString() + " set IsCurrent=0: " + retVal);
+
+                            bIsDue = true;
+                        }
+
+                        if (bIsDue)
+                        {
+                            //add to list - to be sent to coordinator
+                            si.SiteEmailLists.DueList.Add(postTestNextDue);
+                            var minPtnd = postTestNextDue.TestsCompleted.Min(x => x.DateCompleted);
+
+                            body = EmailBodies.PostTestsDueStaff(postTestNextDue.TestsNotCompleted, postTestNextDue.TestsCompleted, minPtnd.Value.AddYears(1));
+                            to = new[] { postTestNextDue.Email };
+
+                            subject = "Please Read: Your HALF-PINT Training is About to Expire - site:" + si.Name;
+                            
+                            //if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                            //{
+                            if (_bSendEmails)
+                                SendHtmlEmail(subject, to, null, body, path,
+                                              @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                            //}
+                            
                         }
                     }
-                    else // check if tests are due
-                    {
-                        //add to list2 for 2nd run
-                        //si.PostTestNextDues2.Add(postTestNextDue);
-                        postTestNextDue.IsOkForList = true;
                         
-                        tsDayWindow = postTestNextDue.NextDueDate.Value - DateTime.Now;
-                        Console.WriteLine("Window days: " + tsDayWindow.Days);
-                        if (tsDayWindow.Days > 30) continue;
-                        
-                        Logger.Info("Post tests are due for " + postTestNextDue.Name);
-                        
-                        //set previous tests to not current (IsCurrent=0)
-                        //this allows the user to take the tests again
-
-                        //todo remove this for production
-                        //int retVal = SetPostTestsCompletedIsCurrent(postTestNextDue.Id);
-                        //Logger.Info("Number of tests set IsCurrent=0: " + retVal);
-
-                        //send email to user                                                           
-                        postTestNextDue.TestsNotCompleted = GetActiveRequiredTests(true);
-                        body = EmailBodies.PostTestsDueStaff(postTestNextDue.TestsNotCompleted, postTestNextDue.NextDueDate.Value);
-                        to = new[] { postTestNextDue.Email };
-
-                        subject = "Please Read: Your HALF-PINT Training is About to Expire - site:" + si.Name;
-
-                        //if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
-                        //{
-                        if (_bSendEmails)
-                            SendHtmlEmail(subject, to, null, body, path,
-                                          @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
-                        //}
-                        //add to list - to be sent to coordinator
-                        si.SiteEmailLists.DueList.Add(postTestNextDue);
-                    }
                 } //foreach (var ptnd in ptndl)
             }
             
@@ -384,17 +343,7 @@ namespace PostTestsService
             }
             Console.Read();
         }
-
         
-
-        private static void SendStaffEmail(PostTestNextDue postTestNextDue)
-        {
-            
-        }
-
-        
-
-
         internal static void SendCoordinatorsEmail(int site, string siteName, SiteEmailLists siteEmailLists, string path)
         {
             var coordinators = GetUserInRole("Coordinator", site);
@@ -635,7 +584,33 @@ namespace PostTestsService
             }
             return memUsers;
         }
-        
+
+        static void SetPostTestsExpiredNotCurrent()
+        {
+            String strConn = ConfigurationManager.ConnectionStrings["Halfpint"].ToString();
+            using (var conn = new SqlConnection(strConn))
+            {
+                try
+                {
+                    var cmd = new SqlCommand("", conn)
+                    {
+                        CommandType = System.Data.CommandType.StoredProcedure,
+                        CommandText = "SetPostTestsExpiredNotCurrent"
+                    };
+                    
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex);
+                    
+                }
+            }
+
+        }
+
         static int SetPostTestCompletedNotCurrent(int id)
         {            
             String strConn = ConfigurationManager.ConnectionStrings["Halfpint"].ToString();
@@ -1530,10 +1505,10 @@ namespace PostTestsService
 
     public static class EmailBodies
     {
-        public static string PostTestsExpiredStaff(List<string> testsNotCompleted)
+        public static string PostTestsExpiredStaff(List<string> testsNotCompleted, List<PostTest> testsCompleted )
         {
             var sb = new StringBuilder();
-            sb.Append("<p>Hello. You are receiving this email because the post-tests you took for the HALF-PINT study have expired.  Please go to the study website and take the required post-tests when you have time. Though you can review the training videos if you would like, you are only required to complete the post-tests (containing 3-5 multiple-choice questions each).</p>");
+            sb.Append("<p>Hello. You are receiving this email because either at least one of the online tests you completed for the HALF-PINT study has expired.  Please go to the study website and take the required post-tests when you have time. Though you can review the training videos if you would like, you are only required to complete the post-tests (containing 3-5 multiple-choice questions each).</p>");
 
             sb.Append("<p>You will receive automatic weekly email reminders until you have completed these post-tests. You are currently locked out of the Nova study glucometer. </p>");
 
@@ -1543,22 +1518,46 @@ namespace PostTestsService
 
             sb.Append("<p>The HALF-PINT Study Team</p>");
 
-            sb.Append("<br/><p><strong>Required Modules Not Completed<strong></p>");
-            sb.Append("<ul>");
-            foreach (var test in testsNotCompleted)
+            if (testsNotCompleted.Count > 0)
             {
-                sb.Append("<li>" + test + " </li>");
+                sb.Append("<br/><p><strong>Required Modules Not Completed<strong></p>");
+                sb.Append("<ul>");
+                foreach (var test in testsNotCompleted)
+                {
+                    sb.Append("<li>" + test + " </li>");
+                }
+                sb.Append("</ul>");
             }
-            sb.Append("</ul>");
+
+            if (testsCompleted.Count > 0)
+            {
+                sb.Append("<br/><p><strong>Required Modules Completed<strong></p>");
+                sb.Append(
+                    "<table style='border-collapse:collapse;' cellpadding='5' border='1'><tr style='background-color:87CEEB'><th>Test</th><th>Next Due Date</th></tr>");
+                foreach (var postTest in testsCompleted)
+                {
+                    Debug.Assert(postTest.DateCompleted != null, "postTest.DateCompleted != null");
+                    var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
+                    var tsDayWindow = nextDueDate - DateTime.Now;
+                    if (tsDayWindow.Days <= 30)
+                        sb.Append("<tr><td>" + postTest.Name + "</td><td><strong>" + nextDueDate.ToShortDateString() +
+                                  "</strong></td></tr>");
+                    else
+                        sb.Append("<tr><td>" + postTest.Name + "</td><td>" + nextDueDate.ToShortDateString() +
+                                  "</td></tr>");
+
+                }
+                sb.Append("</table>");
+            }
             return sb.ToString();
         }
 
-        public static string PostTestsDueStaff(List<string> testsNotCompleted, DateTime dueDate)
+        public static string PostTestsDueStaff(List<string> testsNotCompleted, List<PostTest> testsCompleted, DateTime dueDate)
         {
             var sb = new StringBuilder();
             sb.Append("<p>Hello. You are receiving this email because at least one of the online tests you completed for the HALF-PINT study will expire soon.  Please go to the study website and take the required post-tests when you have time. Though you can review the training videos if you would like, you are only required to complete the post-tests (containing 3-5 multiple-choice questions each).</p>");
 
-            sb.Append("<p>You will receive automatic weekly email reminders until you have completed these post-tests. If you are not able to take these tests prior to the due date of <strong>" + dueDate.AddDays(-1).ToShortDateString() + ",</strong> you will be locked out of the Nova study glucometer. </p>");
+            sb.Append("<p>You will receive automatic weekly email reminders until you have completed these post-tests. If you are not able to take these tests prior to the due date <strong>" + dueDate.ToShortDateString() + "</strong>, you will be locked out of the Nova study glucometer. </p>");
 
             sb.Append("<p>If you have any questions concerning this request, please contact the HALF-PINT Nurse Champion in your ICU, or the national study nurse, Kerry Coughlin-Wells (Kerry.Coughlin-Wells@childrens.harvard.edu). </p>");
 
@@ -1566,17 +1565,41 @@ namespace PostTestsService
 
             sb.Append("<p>The HALF-PINT Study Team</p>");
 
-            sb.Append("<br/><p><strong>Required Modules Not Completed<strong></p>");
-            sb.Append("<ul>");
-            foreach (var test in testsNotCompleted)
+            if (testsNotCompleted.Count > 0)
             {
-                sb.Append("<li>" + test + " </li>");
+                sb.Append("<br/><p><strong>Required Modules Not Completed<strong></p>");
+                sb.Append("<ul>");
+                foreach (var test in testsNotCompleted)
+                {
+                    sb.Append("<li>" + test + " </li>");
+                }
+                sb.Append("</ul>");
             }
-            sb.Append("</ul>");
+
+            if (testsCompleted.Count > 0)
+            {
+                sb.Append("<br/><p><strong>Required Modules Completed<strong></p>");
+                sb.Append(
+                    "<table style='border-collapse:collapse;' cellpadding='5' border='1'><tr style='background-color:87CEEB'><th>Test</th><th>Next Due Date</th></tr>");
+                foreach (var postTest in testsCompleted)
+                {
+                    Debug.Assert(postTest.DateCompleted != null, "postTest.DateCompleted != null");
+                    var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
+                    var tsDayWindow = nextDueDate - DateTime.Now;
+                    if (tsDayWindow.Days <= 30)
+                        sb.Append("<tr><td>" + postTest.Name + "</td><td><strong>" + nextDueDate.ToShortDateString() +
+                                  "</strong></td></tr>");
+                    else
+                        sb.Append("<tr><td>" + postTest.Name + "</td><td>" + nextDueDate.ToShortDateString() +
+                                  "</td></tr>");
+
+                }
+                sb.Append("</table>");
+            }
             return sb.ToString();
         }
 
-        public static string PostTestsDueNewStaff(List<string> testsNotCompleted )
+        public static string PostTestsDueNewStaff(List<string> testsNotCompleted, List<PostTest> testsCompleted)
         {
             var sb = new StringBuilder();
             sb.Append("<p>Hello. You are receiving this email because you have completed HALF-PINT hands-on competencies but have not yet taken the online post-tests required for you to be able to care for a patient on the HALF-PINT Study. Please go to the study website and take the required post-tests when you have time. Please review the training video for each module, then complete the post-test (containing 3-5 multiple-choice questions each).</p>");
@@ -1589,13 +1612,37 @@ namespace PostTestsService
 
             sb.Append("<p>The HALF-PINT Study Team</p>");
 
-            sb.Append("<br/><p><strong>Required Modules Not Completed<strong></p>");
-            sb.Append("<ul>");
-            foreach (var test in testsNotCompleted)
+            if (testsNotCompleted.Count > 0)
             {
-                sb.Append("<li>" + test  + " </li>");
+                sb.Append("<br/><p><strong>Required Modules Not Completed<strong></p>");
+                sb.Append("<ul>");
+                foreach (var test in testsNotCompleted)
+                {
+                    sb.Append("<li>" + test + " </li>");
+                }
+                sb.Append("</ul>");
             }
-            sb.Append("</ul>");
+
+            if (testsCompleted.Count > 0)
+            {
+                sb.Append("<br/><p><strong>Required Modules Completed<strong></p>");
+                sb.Append(
+                    "<table style='border-collapse:collapse;' cellpadding='5' border='1'><tr style='background-color:87CEEB'><th>Test</th><th>Next Due Date</th></tr>");
+                foreach (var postTest in testsCompleted)
+                {
+                    Debug.Assert(postTest.DateCompleted != null, "postTest.DateCompleted != null");
+                    var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
+                    var tsDayWindow = nextDueDate - DateTime.Now;
+                    if (tsDayWindow.Days <= 30)
+                        sb.Append("<tr><td>" + postTest.Name + "</td><td><strong>" + nextDueDate.ToShortDateString() +
+                                  "</strong></td></tr>");
+                    else
+                        sb.Append("<tr><td>" + postTest.Name + "</td><td>" + nextDueDate.ToShortDateString() +
+                                  "</td></tr>");
+
+                }
+                sb.Append("</table>");
+            }
             return sb.ToString();
         }
     }
