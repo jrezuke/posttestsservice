@@ -128,6 +128,7 @@ namespace PostTestsService
                     //see if all required post tests are completed
                     if (postTestNextDue.TestsNotCompleted.Count > 0)
                     {
+
                         //todo - this is temporary - you can get rid of this after 9/1/13
                         if (postTestNextDue.TestsNotCompleted.Count == 1)
                         {
@@ -151,6 +152,7 @@ namespace PostTestsService
                                 {
                                     continue;
                                 }
+                                
 
                                 var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
                                 tsDayWindow = nextDueDate - DateTime.Now;
@@ -205,10 +207,10 @@ namespace PostTestsService
 
                             }
                         }
+                        if (!bTempIncludOnList)
+                            continue;
                     }
-                    if (!bTempIncludOnList)
-                        continue;
-
+                    
                     //else
                     {
                         postTestNextDue.IsOkForList = true;
@@ -1013,6 +1015,7 @@ namespace PostTestsService
         public DateTime? DateCompleted { get; set; }
         public string SDateCompleted { get; set; }
         public bool IsCurrent { get; set; }
+        public bool IsRequired { get; set; }
     }
     
     public class SiteInfo
@@ -1126,7 +1129,7 @@ namespace PostTestsService
 
             if (testsCompleted.Count > 0)
             {
-                sb.Append("<br/><p><strong>Required Modules Completed<strong></p>");
+                sb.Append("<br/><p><strong>Required Modules Next Due Dates<strong></p>");
                 sb.Append(
                     "<table style='border-collapse:collapse;' cellpadding='5' border='1'><tr style='background-color:87CEEB'><th>Test</th><th>Next Due Date</th></tr>");
                 foreach (var postTest in testsCompleted)
@@ -1173,7 +1176,7 @@ namespace PostTestsService
 
             if (testsCompleted.Count > 0)
             {
-                sb.Append("<br/><p><strong>Required Modules Completed<strong></p>");
+                sb.Append("<br/><p><strong>Required Modules Nest Due Dates<strong></p>");
                 sb.Append(
                     "<table style='border-collapse:collapse;' cellpadding='5' border='1'><tr style='background-color:87CEEB'><th>Test</th><th>Next Due Date</th></tr>");
                 foreach (var postTest in testsCompleted)
@@ -1220,7 +1223,7 @@ namespace PostTestsService
 
             if (testsCompleted.Count > 0)
             {
-                sb.Append("<br/><p><strong>Required Modules Completed<strong></p>");
+                sb.Append("<br/><p><strong>Required Modules Next Due Dates<strong></p>");
                 sb.Append(
                     "<table style='border-collapse:collapse;' cellpadding='5' border='1'><tr style='background-color:87CEEB'><th>Test</th><th>Next Due Date</th></tr>");
                 foreach (var postTest in testsCompleted)
