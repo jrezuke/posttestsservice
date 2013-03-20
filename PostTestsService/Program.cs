@@ -16,6 +16,7 @@ namespace PostTestsService
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private static bool _bSendEmails = true;
+        private static bool _bForceEmails = false;
 
         static void Main(string[] args)
         {
@@ -26,6 +27,9 @@ namespace PostTestsService
                 if (args[0] == "noEmails")
                     _bSendEmails = false;
 
+                if (args[0] == "forceEmails")
+                    _bForceEmails = true;
+
                 Console.WriteLine("Argument:" + args[0]);
                 Logger.Info("Argument:" + args[0]);
             }
@@ -33,10 +37,10 @@ namespace PostTestsService
             var path = AppDomain.CurrentDomain.BaseDirectory;
 
             //set is current is false for expired post tests
-            //it's possible that this program could miss setting expired post tests is current
+            //it's possible that this program could miss setting expired post tests is current to 0
             //this will make sure
-            //todo - uncomment this for prod
-            //SetPostTestsExpiredNotCurrent();
+            //done - to do - uncomment this for prod
+            SetPostTestsExpiredNotCurrent();
 
             //get sites 
             var sites = GetSites();
@@ -44,9 +48,9 @@ namespace PostTestsService
             //iterate sites
             foreach (var si in sites.Where(si => si.EmpIdRequired))
             {
-                //todo - comment this for prod
-                if (si.Id > 1)
-                    continue;
+                //done - to do - comment this for prod
+                //if (si.Id > 1)
+                //    continue;
 
                 si.SiteEmailLists = new SiteEmailLists
                                         {
@@ -63,8 +67,7 @@ namespace PostTestsService
 
                 Console.WriteLine(si.Name);
                 Logger.Info("For Site:" + si.Name + " - " + si.SiteId);
-                //Logger.Debug("For Site:" + si.Name + " - " + si.SiteId);
-
+                
                 //Get staff info including next due date, tests not completed, is new staff - next due date will be 1 year from today for new staff
                 //staff roles not included are Admin, DCC , Nurse generic (nurse accounts with a user name)
                 si.PostTestNextDues = GetStaffPostTestsCompletedInfo(si.Id);
@@ -78,13 +81,14 @@ namespace PostTestsService
                                        StaffId = postTestNextDue.Id,
                                        StaffName = postTestNextDue.Name,
                                        Role = postTestNextDue.Role,
-                                       TestsNotCompleted = postTestNextDue.TestsNotCompleted
+                                       TestsNotCompleted = postTestNextDue.TestsNotCompleted,
+                                       TestsCompleted = postTestNextDue.TestsCompleted
                                    };
                     si.SiteEmailLists.StaffTestsNotCompletedList.Add(stnc);
-                    stnc.TestsCompleted = postTestNextDue.TestsCompleted;
-
+                    
                     var bContinue = false;
                     Console.WriteLine(postTestNextDue.Name + ", email: " + postTestNextDue.Email + ", Employee ID: " + postTestNextDue.EmployeeId + ", Role: " + postTestNextDue.Role);
+                    Logger.Info("For staff member:" + postTestNextDue.Name + ", email: " + postTestNextDue.Email + ", Employee ID: " + postTestNextDue.EmployeeId + ", Role: " + postTestNextDue.Role);
 
                     if (postTestNextDue.Role != "Nurse")
                     {
@@ -152,13 +156,12 @@ namespace PostTestsService
                         {
                             //check for any current tests that are becoming due
 
-                            //don't require overview for the second year
+                            //don't require overview for the second year so don't list it on tests completed
                             postTestNextDue.TestsCompleted.RemoveAll(x => x.Name == "Overview");
                             foreach (var postTest in postTestNextDue.TestsCompleted)
                             {
                                 //check to see if one of the tests is not current
                                 //if not current, this means that the staff member has less than 30 days to complete this test before it expires
-
                                 if (!postTest.IsCurrent)
                                 {
                                     continue;
@@ -172,9 +175,9 @@ namespace PostTestsService
 
                                 //within the 30 day window
                                 //set the test as non-current so that the user can re-take the test
-                                //todo - uncomment this for prod
-                                //var retVal = SetPostTestCompletedNotCurrent(postTest.PostTestCompletedId);
-                                //Logger.Info("Test " + postTest.Name + " , date completed:" + postTest.DateCompleted.Value.ToShortDateString() + " set IsCurrent=0: " + retVal);
+                                //done to do - uncomment this for prod
+                                var retVal = SetPostTestCompletedNotCurrent(postTest.PostTestCompletedId);
+                                Logger.Info("Test " + postTest.Name + " , date completed:" + postTest.DateCompleted.Value.ToShortDateString() + " set IsCurrent=0: " + retVal);
 
                             }
                         }
@@ -244,9 +247,9 @@ namespace PostTestsService
 
                             //within the 30 day window
                             //set the test as non-current so that the user can re-take the test
-                            //todo - uncomment this for prod
-                            //var retVal = SetPostTestCompletedNotCurrent(postTest.PostTestCompletedId);
-                            //Logger.Info("Test " + postTest.Name + " , date completed:" + postTest.DateCompleted.Value.ToShortDateString() + " set IsCurrent=0: " + retVal);
+                            //done to do - uncomment this for prod
+                            var retVal = SetPostTestCompletedNotCurrent(postTest.PostTestCompletedId);
+                            Logger.Info("Test " + postTest.Name + " , date completed:" + postTest.DateCompleted.Value.ToShortDateString() + " set IsCurrent=0: " + retVal);
 
                             bIsDue = true;
                         }
@@ -262,12 +265,12 @@ namespace PostTestsService
 
                             subject = "Please Read: Your HALF-PINT Training is About to Expire - site:" + si.Name;
 
-                            //if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
-                            //{
-                            if (_bSendEmails)
-                                SendHtmlEmail(subject, to, null, body, path,
-                                              @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
-                            //}
+                            if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                            {
+                                if (_bSendEmails)
+                                    SendHtmlEmail(subject, to, null, body, path,
+                                                  @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                            }
 
                         }
                     }
@@ -283,9 +286,9 @@ namespace PostTestsService
             //iterate sites
             foreach (var si in sites)
             {
-                //todo - comment this for prod
-                if (si.Id > 1)
-                    continue;
+                //done to do - comment this for prod
+                //if (si.Id > 1)
+                //    continue;
 
                 //skip for sites not needed
                 if (!si.EmpIdRequired)
@@ -380,16 +383,14 @@ namespace PostTestsService
             {
                 foreach (var si in sites)
                 {
-                    //todo - comment this for prod
-                    if (si.Id > 1)
-                        continue;
+                    //done to do - comment this for prod
+                    //if (si.Id > 1)
+                    //    continue;
 
                     //skip for sites not needed
                     if (!si.EmpIdRequired)
                         continue;
-
-                    //var siteEmailList = siteLists.Find(x => x.SiteId == si.Id);
-                    //si.SiteEmailLists.StaffTestsNotCompletedList = GetStaffPostTestCompleted(si.Id).ToList();
+                    
                     SendCoordinatorsEmail(si.Id, si.Name, si.SiteEmailLists, path);
 
                 } //foreach (var si in sites) - tests not completed
@@ -485,7 +486,7 @@ namespace PostTestsService
             { }
             else
             {
-                var expiredSortedList = siteEmailLists.ExpiredList.OrderBy(x => x.NextDueDate).ToList();
+                var expiredSortedList = siteEmailLists.ExpiredList.OrderBy(x => x.NextDueDate).ToList();    
                 sbBody.Append("<h3>The following expired staff members have not completed their annual post tests.</h3>");
 
                 sbBody.Append("<table style='border-collapse:collapse;' cellpadding='5' border='1'><tr style='background-color:87CEEB'><th>Name</th><th>Role</th><th>Due Date</th><th>Email</th></tr>");
@@ -517,6 +518,7 @@ namespace PostTestsService
 
             if (siteEmailLists.StaffTestsNotCompletedList.Count > 0)
             {
+                var notCompletedSortedList = siteEmailLists.StaffTestsNotCompletedList.OrderBy(x => x.StaffName).ToList();
                 sbBody.Append("<h3>The following staff members have not completed all post tests.</h3>");
 
                 //sbBody.Append("<div><table style='border-collapse:collapse;' cellpadding='5' border='1';><tr style='background-color:87CEEB'><th>Name</th><th>Role</th><th>Email</th><th>Tests Not Completed</th><th>Tests Completed</th></tr>");
@@ -883,7 +885,6 @@ namespace PostTestsService
 
                             if (ptnd.NextDueDate == null)
                                 ptnd.NextDueDate = postTest.DateCompleted.Value.AddYears(1);
-
 
                             //remove this from the tests not completed list
                             ptnd.TestsNotCompleted.Remove(postTest.Name);
