@@ -93,9 +93,9 @@ namespace PostTestsService
                     if (postTestNextDue.Role != "Nurse")
                     {
                         //make sure they are nova net certified
-                        if (!postTestNextDue.IsNovaNetTested)
+                        if (!postTestNextDue.IsNovaStatStripTested)
                         {
-                            Logger.Info("NovaNet competency needed for " + postTestNextDue.Name);
+                            Logger.Info("NovaStatStrip competency needed for " + postTestNextDue.Name);
                             si.SiteEmailLists.CompetencyMissingList.Add(postTestNextDue);
                             bContinue = true;
                         }
@@ -103,7 +103,7 @@ namespace PostTestsService
                     else
                     {
                         //make sure they are nova net and vamp certified
-                        if ((!postTestNextDue.IsNovaNetTested) || (!postTestNextDue.IsVampTested))
+                        if ((!postTestNextDue.IsNovaStatStripTested) || (!postTestNextDue.IsVampTested))
                         {
                             Logger.Info("Competency needed for " + postTestNextDue.Name);
                             si.SiteEmailLists.CompetencyMissingList.Add(postTestNextDue);
@@ -130,7 +130,6 @@ namespace PostTestsService
                     if (bContinue)
                         continue;
 
-                    TimeSpan tsDayWindow;
                     string subject;
                     string body;
                     string[] to;
@@ -142,14 +141,13 @@ namespace PostTestsService
                     foreach (var postTest in postTestNextDue.TestsCompleted)
                     {
                         //if not current, this means that the staff member has less than 30 days to complete this test before it expires
-                        if (!postTest.IsCurrent)
-                            bIsDue = true;
+                        //if (!postTest.IsCurrent)
+                        //    bIsDue = true;
 
                         var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
-                        tsDayWindow = nextDueDate - DateTime.Now;
+                        var tsDayWindow = nextDueDate - DateTime.Now;
                         if (tsDayWindow.Days > 30)
                             continue;
-
 
                         //within the 30 day window
                         //set the test as non-current so that the user can re-take the test
@@ -293,7 +291,7 @@ namespace PostTestsService
                     //{
                     //    //make sure they are certified - if not then remove
                     //    //this is now handled in postTestNextDues2  
-                    //    //if ((!ptnd.IsNovaNetTested) || (!ptnd.IsVampTested))
+                    //    //if ((!ptnd.IsNovaStatStripTested) || (!ptnd.IsVampTested))
                     //    //{
                     //    //    lines.Remove(line);
                     //    //    siteEmailList.StaffRemovedList.Add(ptnd);
@@ -312,7 +310,7 @@ namespace PostTestsService
                     //else //this is a new operator
                     //{
                     //make sure they are certified - if not then don't add
-                    //if ((!ptnd.IsNovaNetTested) || (!ptnd.IsVampTested))
+                    //if ((!ptnd.IsNovaStatStripTested) || (!ptnd.IsVampTested))
                     //    continue;
 
                     //email coord
@@ -390,8 +388,8 @@ namespace PostTestsService
                         email = ptnd.Email;
 
                     var test = "";
-                    if (!ptnd.IsNovaNetTested)
-                        test = "Nova Net";
+                    if (!ptnd.IsNovaStatStripTested)
+                        test = "NovaStatStrip ";
                     if (ptnd.Role == "Nurse")
                     {
                         if (!ptnd.IsVampTested)
@@ -806,7 +804,7 @@ namespace PostTestsService
                         pos = rdr.GetOrdinal("NovaStatStrip");
                         if (!rdr.IsDBNull(pos))
                         {
-                            ptnd.IsNovaNetTested = rdr.GetBoolean(pos);
+                            ptnd.IsNovaStatStripTested = rdr.GetBoolean(pos);
                         }
 
                         pos = rdr.GetOrdinal("Vamp");
@@ -849,8 +847,8 @@ namespace PostTestsService
                             pos = rdr.GetOrdinal("DateCompleted");
                             postTest.DateCompleted = rdr.GetDateTime(pos);
 
-                            pos = rdr.GetOrdinal("IsCurrent");
-                            postTest.IsCurrent = rdr.GetBoolean(pos);
+                            //pos = rdr.GetOrdinal("IsCurrent");
+                            //postTest.IsCurrent = rdr.GetBoolean(pos);
 
                             if (ptnd.NextDueDate == null)
                                 ptnd.NextDueDate = postTest.DateCompleted.Value.AddYears(1);
@@ -905,7 +903,7 @@ namespace PostTestsService
             var sw = new StreamWriter(fullpath, false);
 
 
-            sw.WriteLine("NovaNet Operator Import Data,version 2.0,,,,,,,,,");
+            sw.WriteLine("NovaStatStrip Operator Import Data,version 2.0,,,,,,,,,");
             foreach (var line in lines)
             {
                 sw.Write(line.LastName + ",");
@@ -1007,7 +1005,8 @@ namespace PostTestsService
         public string PathName { get; set; }
         public DateTime? DateCompleted { get; set; }
         public string SDateCompleted { get; set; }
-        public bool IsCurrent { get; set; }
+        public bool IsExpired { get; set; }
+        public bool IsDue { get; set; }
         public bool IsRequired { get; set; }
     }
 
@@ -1036,10 +1035,12 @@ namespace PostTestsService
         public string SNextDueDate { get; set; }
         public string Email { get; set; }
         public string EmployeeId { get; set; }
-        public bool IsNovaNetTested { get; set; }
+        public bool IsNovaStatStripTested { get; set; }
         public bool IsVampTested { get; set; }
         public string Role { get; set; }
         public bool IsNew { get; set; }
+        public bool IsExpired { get; set; }
+        public bool IsDue { get; set; }
         public bool IsOkForList { get; set; }
         public List<String> TestsNotCompleted { get; set; }
         public List<PostTest> TestsCompleted { get; set; }
