@@ -35,13 +35,7 @@ namespace PostTestsService
             }
 
             var path = AppDomain.CurrentDomain.BaseDirectory;
-
-            //set is current is false for expired post tests
-            //it's possible that this program could miss setting expired post tests is current to 0
-            //this will make sure
-            //done - to do - uncomment this for prod
-            SetPostTestsExpiredNotCurrent();
-
+            
             //get sites 
             var sites = GetSites();
 
@@ -137,26 +131,26 @@ namespace PostTestsService
                     var bIsDue = false;
 
                     //don't require overview for the second year so don't list it on tests completed
-                    postTestNextDue.TestsCompleted.RemoveAll(x => x.Name == "Overview");
-                    foreach (var postTest in postTestNextDue.TestsCompleted)
-                    {
-                        //if not current, this means that the staff member has less than 30 days to complete this test before it expires
-                        //if (!postTest.IsCurrent)
-                        //    bIsDue = true;
+                    //postTestNextDue.TestsCompleted.RemoveAll(x => x.Name == "Overview");
+                    //foreach (var postTest in postTestNextDue.TestsCompleted)
+                    //{
+                    //    //if not current, this means that the staff member has less than 30 days to complete this test before it expires
+                    //    //if (!postTest.IsCurrent)
+                    //    //    bIsDue = true;
 
-                        var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
-                        var tsDayWindow = nextDueDate - DateTime.Now;
-                        if (tsDayWindow.Days > 30)
-                            continue;
+                    //    var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
+                    //    var tsDayWindow = nextDueDate - DateTime.Now;
+                    //    if (tsDayWindow.Days > 30)
+                    //        continue;
 
-                        //within the 30 day window
-                        //set the test as non-current so that the user can re-take the test
-                        //done to do - uncomment this for prod
-                        var retVal = SetPostTestCompletedNotCurrent(postTest.PostTestCompletedId);
-                        Logger.Info("Test " + postTest.Name + " , date completed:" + postTest.DateCompleted.Value.ToShortDateString() + " set IsCurrent=0: " + retVal);
+                    //    //within the 30 day window
+                    //    //set the test as non-current so that the user can re-take the test
+                    //    //done to do - uncomment this for prod
+                    //    var retVal = SetPostTestCompletedNotCurrent(postTest.PostTestCompletedId);
+                    //    Logger.Info("Test " + postTest.Name + " , date completed:" + postTest.DateCompleted.Value.ToShortDateString() + " set IsCurrent=0: " + retVal);
 
-                        bIsDue = true;
-                    }
+                    //    bIsDue = true;
+                    //}
 
                     //see if all required post tests are completed
                     if (postTestNextDue.TestsNotCompleted.Count > 0)
@@ -221,7 +215,7 @@ namespace PostTestsService
                     {
                         postTestNextDue.IsOkForList = true;
 
-                        if (bIsDue)
+                        if (postTestNextDue.IsDue)
                         {
                             //add to list - to be sent to coordinator
                             si.SiteEmailLists.DueList.Add(postTestNextDue);
@@ -239,6 +233,23 @@ namespace PostTestsService
                                                   @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
                             }
 
+                        }
+                        if (postTestNextDue.IsExpired)
+                        {
+                            si.SiteEmailLists.ExpiredList.Add(postTestNextDue);
+                            //send new user email
+                            body = EmailBodies.PostTestsExpiredStaff(postTestNextDue.TestsNotCompleted,
+                                                                     postTestNextDue.TestsCompleted);
+                            to = new[] { postTestNextDue.Email };
+
+                            subject = "Please Read: Your HALF-PINT Training Has Expired - site:" + si.Name;
+
+                            if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                            {
+                                if (_bSendEmails)
+                                    SendHtmlEmail(subject, to, null, body, path,
+                                                  @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                            }
                         }
                     }
 
@@ -768,7 +779,7 @@ namespace PostTestsService
                     {
                         var pos = rdr.GetOrdinal("Role");
                         var role = rdr.GetString(pos);
-
+                        
                         if (role == "Admin")
                             continue;
 
@@ -846,12 +857,42 @@ namespace PostTestsService
 
                             pos = rdr.GetOrdinal("DateCompleted");
                             postTest.DateCompleted = rdr.GetDateTime(pos);
+                            
+                            //ignore 'Overview' for due and expired
+                            if (postTest.Name != "Overview")
+                            {
 
-                            //pos = rdr.GetOrdinal("IsCurrent");
-                            //postTest.IsCurrent = rdr.GetBoolean(pos);
+                                //this is temporary - take this out after May 1
 
-                            if (ptnd.NextDueDate == null)
-                                ptnd.NextDueDate = postTest.DateCompleted.Value.AddYears(1);
+                                #region tempDateCompleted
+
+                                var dateCompleted = postTest.DateCompleted.GetValueOrDefault();
+                                if (dateCompleted.CompareTo(DateTime.Parse("05/01/2012")) < 0)
+                                    dateCompleted = DateTime.Parse("05/01/2012");
+
+                                var nextDueDate = dateCompleted.AddYears(1);
+
+                                #endregion tempDateCompleted
+
+                                if (ptnd.NextDueDate == null)
+                                    ptnd.NextDueDate = postTest.DateCompleted.Value.AddYears(1);
+
+                                //var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
+                                var tsDayWindow = nextDueDate - DateTime.Now;
+                                if (tsDayWindow.Days <= 30)
+                                {
+                                    if (tsDayWindow.Days < 0)
+                                    {
+                                        postTest.IsExpired = true;
+                                        ptnd.IsExpired = true;
+                                    }
+                                    else
+                                    {
+                                        postTest.IsDue = true;
+                                        ptnd.IsDue = true;
+                                    }
+                                }
+                            }
 
                             //remove this from the tests not completed list
                             ptnd.TestsNotCompleted.Remove(postTest.Name);
