@@ -902,23 +902,33 @@ namespace PostTestsService
                         rdr.Close();
                         conn.Close();
 
-                        cmd = new SqlCommand("", conn)
+                        if (ptnd.TestsCompleted.Count == 0 || (ptnd.TestsNotCompleted.Contains("Overview")))
                         {
-                            CommandType = System.Data.CommandType.StoredProcedure,
-                            CommandText = "IsStaffMemberPostTestsNew"
-                        };
-                        param = new SqlParameter("@staffId", ptnd.Id);
-                        cmd.Parameters.Add(param);
-                        conn.Open();
-                        var count = (int)cmd.ExecuteScalar();
-                        ptnd.IsNew = count <= 0;
+                            ptnd.IsNew = true;
+                            if (ptnd.NextDueDate == null)
+                                ptnd.NextDueDate = DateTime.Today.AddYears(1);
 
-                        if (!ptnd.IsNew)
-                        {
-                            if (ptnd.TestsNotCompleted.Contains("Overview"))
-                                ptnd.TestsNotCompleted.Remove("Overview");
                         }
-                        conn.Close();
+                        else
+                        {
+                            cmd = new SqlCommand("", conn)
+                            {
+                                CommandType = System.Data.CommandType.StoredProcedure,
+                                CommandText = "IsStaffMemberPostTestsNew"
+                            };
+                            param = new SqlParameter("@staffId", ptnd.Id);
+                            cmd.Parameters.Add(param);
+                            conn.Open();
+                            var count = (int)cmd.ExecuteScalar();
+                            ptnd.IsNew = count > 0;
+
+                            if (!ptnd.IsNew)
+                            {
+                                if (ptnd.TestsNotCompleted.Contains("Overview"))
+                                    ptnd.TestsNotCompleted.Remove("Overview");
+                            }
+                            conn.Close();
+                        }
                     }
 
                 }
