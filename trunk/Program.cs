@@ -10,7 +10,7 @@ using System.Net.Mail;
 using System.IO;
 using System.Web.Security;
 
-namespace PostTestsService
+namespace PostTestServicehpProdTest
 {
     class Program
     {
@@ -182,12 +182,11 @@ namespace PostTestsService
                                         "Please Read: Please Complete the Online HALF-PINT Post-Tests - site:{0}",
                                         si.Name);
 
-                                if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
-                                {
-                                    if (_bSendEmails)
-                                        SendHtmlEmail(subject, to, null, body, path,
-                                                      @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
-                                }
+                                //if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                                //{
+                                if (_bSendEmails)
+                                    SendHtmlEmail(subject, to, null, body, path,
+                                                  @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
                             }
                             else
                             {
@@ -199,12 +198,12 @@ namespace PostTestsService
 
                                 subject = "Please Read: Your HALF-PINT Training Has Expired - site:" + si.Name;
 
-                                if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
-                                {
-                                    if (_bSendEmails)
-                                        SendHtmlEmail(subject, to, null, body, path,
-                                                      @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
-                                }
+                                //if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                                //{
+                                if (_bSendEmails)
+                                    SendHtmlEmail(subject, to, null, body, path,
+                                                  @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+
                             }
                         }
                         if (!bTempIncludOnList)
@@ -226,12 +225,12 @@ namespace PostTestsService
 
                             subject = "Please Read: Your HALF-PINT Training is About to Expire - site:" + si.Name;
 
-                            if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
-                            {
+                            //if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                            //{
                                 if (_bSendEmails)
                                     SendHtmlEmail(subject, to, null, body, path,
                                                   @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
-                            }
+                            //}
 
                         }
                         if (postTestNextDue.IsExpired)
@@ -244,12 +243,12 @@ namespace PostTestsService
 
                             subject = "Please Read: Your HALF-PINT Training Has Expired - site:" + si.Name;
 
-                            if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
-                            {
+                            //if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                            //{
                                 if (_bSendEmails)
                                     SendHtmlEmail(subject, to, null, body, path,
                                                   @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
-                            }
+                            //}
                         }
                     }
 
@@ -825,12 +824,16 @@ namespace PostTestsService
                         }
 
                         ptndl.Add(ptnd);
+                       
                     }
                     rdr.Close();
                     conn.Close();
-
+                    
                     foreach (var ptnd in ptndl)
                     {
+                        bool bBreak = false;
+                        if (ptnd.Id == 802)
+                            bBreak = true;
                         cmd = new SqlCommand("", conn)
                         {
                             CommandType = System.Data.CommandType.StoredProcedure,
@@ -902,23 +905,33 @@ namespace PostTestsService
                         rdr.Close();
                         conn.Close();
 
-                        cmd = new SqlCommand("", conn)
+                        if (ptnd.TestsCompleted.Count == 0 || (ptnd.TestsNotCompleted.Contains("Overview")))
                         {
-                            CommandType = System.Data.CommandType.StoredProcedure,
-                            CommandText = "IsStaffMemberPostTestsNew"
-                        };
-                        param = new SqlParameter("@staffId", ptnd.Id);
-                        cmd.Parameters.Add(param);
-                        conn.Open();
-                        var count = (int)cmd.ExecuteScalar();
-                        ptnd.IsNew = count <= 0;
+                            ptnd.IsNew = true;
+                            if (ptnd.NextDueDate == null)
+                                ptnd.NextDueDate = DateTime.Today.AddYears(1);
 
-                        if (!ptnd.IsNew)
-                        {
-                            if (ptnd.TestsNotCompleted.Contains("Overview"))
-                                ptnd.TestsNotCompleted.Remove("Overview");
                         }
-                        conn.Close();
+                        else
+                        {
+                            cmd = new SqlCommand("", conn)
+                            {
+                                CommandType = System.Data.CommandType.StoredProcedure,
+                                CommandText = "IsStaffMemberPostTestsNew"
+                            };
+                            param = new SqlParameter("@staffId", ptnd.Id);
+                            cmd.Parameters.Add(param);
+                            conn.Open();
+                            var count = (int)cmd.ExecuteScalar();
+                            ptnd.IsNew = count > 0;
+
+                            if (!ptnd.IsNew)
+                            {
+                                if (ptnd.TestsNotCompleted.Contains("Overview"))
+                                    ptnd.TestsNotCompleted.Remove("Overview");
+                            }
+                            conn.Close();
+                        }
                     }
 
                 }
