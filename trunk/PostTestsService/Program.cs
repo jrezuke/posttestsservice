@@ -12,6 +12,15 @@ using System.Web.Security;
 
 namespace PostTestsService
 {
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="noEmails"></param>
+    /// use noEmails argument when you want to run this program on mondays and not send an email
+    /// this sets _bSendEmails to false
+    /// <param name="forceEmails"></param>
+    /// use forceEmails to send emails on any day
+    /// this sets _bForceEmails to true
     class Program
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
@@ -22,6 +31,8 @@ namespace PostTestsService
         {
             Logger.Info("Starting PostTests Service");
 
+            DeleteOldOperatorsLists();
+            
             if (args.Length > 0)
             {
                 if (args[0] == "noEmails")
@@ -128,7 +139,7 @@ namespace PostTestsService
                     string body;
                     string[] to;
                     var bTempIncludOnList = false;
-                    var bIsDue = false;
+                    //var bIsDue = false;
 
                     //don't require overview for the second year so don't list it on tests completed
                     //postTestNextDue.TestsCompleted.RemoveAll(x => x.Name == "Overview");
@@ -182,11 +193,19 @@ namespace PostTestsService
                                         "Please Read: Please Complete the Online HALF-PINT Post-Tests - site:{0}",
                                         si.Name);
 
-                                if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                                if (_bForceEmails)
                                 {
-                                    if (_bSendEmails)
-                                        SendHtmlEmail(subject, to, null, body, path,
-                                                      @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                    SendHtmlEmail(subject, to, null, body, path,
+                                                  @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                }
+                                else
+                                {
+                                    if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                                    {
+                                        if (_bSendEmails)
+                                            SendHtmlEmail(subject, to, null, body, path,
+                                                          @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                    }
                                 }
                             }
                             else
@@ -199,11 +218,20 @@ namespace PostTestsService
 
                                 subject = "Please Read: Your HALF-PINT Training Has Expired - site:" + si.Name;
 
-                                if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                                if (_bForceEmails)
                                 {
                                     if (_bSendEmails)
                                         SendHtmlEmail(subject, to, null, body, path,
                                                       @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                }
+                                else
+                                {
+                                    if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                                    {
+                                        if (_bSendEmails)
+                                            SendHtmlEmail(subject, to, null, body, path,
+                                                          @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                    }
                                 }
                             }
                         }
@@ -226,14 +254,23 @@ namespace PostTestsService
 
                             subject = "Please Read: Your HALF-PINT Training is About to Expire - site:" + si.Name;
 
-                            if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                            if (_bForceEmails)
                             {
                                 if (_bSendEmails)
                                     SendHtmlEmail(subject, to, null, body, path,
                                                   @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
                             }
-
+                            else
+                            {
+                                if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                                {
+                                    if (_bSendEmails)
+                                        SendHtmlEmail(subject, to, null, body, path,
+                                                      @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                }    
+                            }
                         }
+
                         if (postTestNextDue.IsExpired)
                         {
                             si.SiteEmailLists.ExpiredList.Add(postTestNextDue);
@@ -244,11 +281,20 @@ namespace PostTestsService
 
                             subject = "Please Read: Your HALF-PINT Training Has Expired - site:" + si.Name;
 
-                            if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                            if (_bForceEmails)
                             {
                                 if (_bSendEmails)
                                     SendHtmlEmail(subject, to, null, body, path,
                                                   @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                            }
+                            else
+                            {
+                                if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                                {
+                                    if (_bSendEmails)
+                                        SendHtmlEmail(subject, to, null, body, path,
+                                                      @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                }   
                             }
                         }
                     }
@@ -353,7 +399,7 @@ namespace PostTestsService
 
 
                 //write lines to new file
-                WriteNovaNetFile(lines, si.Name);
+                WriteNovaNetFile(lines, si.Name, si.SiteId);
                 Logger.Info("WriteNovaNetFile:" + si.Name);
             }//foreach (var si in sites) - write file
 
@@ -373,7 +419,19 @@ namespace PostTestsService
 
                 } //foreach (var si in sites) - tests not completed
             }
-            Console.Read();
+            //Console.Read();
+        }
+
+        private static void DeleteOldOperatorsLists()
+        {
+            var folderPath = ConfigurationManager.AppSettings["StatStripListPath"];
+            var di = new DirectoryInfo(folderPath);
+            
+            var files = from f in di.GetFiles()
+                where f.LastWriteTime < DateTime.Now.AddDays(-7)
+                select f;
+            files.ToList().ForEach(f => f.Delete());
+
         }
 
         internal static void SendCoordinatorsEmail(int site, string siteName, SiteEmailLists siteEmailLists, string path)
@@ -623,62 +681,7 @@ namespace PostTestsService
             }
             return memUsers;
         }
-
-        //static void SetPostTestsExpiredNotCurrent()
-        //{
-        //    String strConn = ConfigurationManager.ConnectionStrings["Halfpint"].ToString();
-        //    using (var conn = new SqlConnection(strConn))
-        //    {
-        //        try
-        //        {
-        //            var cmd = new SqlCommand("", conn)
-        //            {
-        //                CommandType = System.Data.CommandType.StoredProcedure,
-        //                CommandText = "SetPostTestsExpiredNotCurrent"
-        //            };
-
-        //            conn.Open();
-        //            cmd.ExecuteNonQuery();
-
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            Logger.Error(ex);
-
-        //        }
-        //    }
-
-        //}
-
-        //static int SetPostTestCompletedNotCurrent(int id)
-        //{
-        //    String strConn = ConfigurationManager.ConnectionStrings["Halfpint"].ToString();
-        //    using (var conn = new SqlConnection(strConn))
-        //    {
-        //        try
-        //        {
-        //            var cmd = new SqlCommand("", conn)
-        //                          {
-        //                              CommandType = System.Data.CommandType.StoredProcedure,
-        //                              CommandText = "SetPostTestCompletedNotCurrent"
-        //                          };
-
-        //            var param = new SqlParameter("@id", id);
-        //            cmd.Parameters.Add(param);
-
-        //            conn.Open();
-        //            return cmd.ExecuteNonQuery();
-
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            Logger.Error(ex);
-        //            return -1;
-        //        }
-        //    }
-
-        //}
-
+        
         public static List<String> GetActiveRequiredTests(bool isSecondYear)
         {
             var list = new List<string>();
@@ -942,13 +945,18 @@ namespace PostTestsService
             return ptndl;
         }
 
-        static void WriteNovaNetFile(IEnumerable<NovaNetColumns> lines, string siteName)
+        static void WriteNovaNetFile(IEnumerable<NovaNetColumns> lines, string siteName, string siteCode)
         {
             //write lines to new file
             var folderPath = ConfigurationManager.AppSettings["StatStripListPath"];
-            var fileName = siteName + " " + ConfigurationManager.AppSettings["StatStripListName"];
+            var path = Path.Combine(folderPath, siteCode);
+            if (!Directory.Exists(path))
+                Directory.CreateDirectory(path);
 
-            var fullpath = Path.Combine(folderPath, fileName);
+            var fileName = siteName + " " + DateTime.Now.ToString("MM-dd-yyyy")  + " " + ConfigurationManager.AppSettings["StatStripListName"]; 
+            
+
+            var fullpath = Path.Combine(path, fileName);
 
 
             var sw = new StreamWriter(fullpath, false);
@@ -972,82 +980,9 @@ namespace PostTestsService
             }
             sw.Close();
         }
-
-        //static List<NovaNetColumns> GetNovaNetFile(string site)
-        //{
-        //    var folderPath = ConfigurationManager.AppSettings["StatStripListPath"];
-        //    var di = new DirectoryInfo(folderPath);
-        //    var files = di.EnumerateFiles();
-        //    var fileName = "";
-
-        //    foreach (var file in files)
-        //    {
-        //        if (file.Name.StartsWith(site))
-        //        {
-        //            fileName = file.Name;
-        //            break;
-        //        }
-        //    }
-        //    if (fileName.Length == 0)
-        //        return null;
-
-        //    fileName = Path.Combine(folderPath, fileName);
-        //    var lines = new List<NovaNetColumns>();
-        //    var delimiters = new[] { ',' };
-        //    using (var reader = new StreamReader(fileName))
-        //    {
-        //        int count = 1;
-        //        while (true)
-        //        {
-        //            var line = reader.ReadLine();
-        //            if (line == null)
-        //            {
-        //                break;
-        //            }
-
-        //            if (count == 1)
-        //            {                        
-        //                count = 2;
-        //                continue;
-        //            }
-        //            var cols = new NovaNetColumns();
-        //            var parts = line.Split(delimiters);
-
-        //            cols.LastName = parts[0];
-        //            cols.FirstName = parts[1];
-        //            cols.Col3 = parts[2];
-        //            cols.Col4 = parts[3];
-        //            cols.Col5 = parts[4];
-
-        //            string empId = parts[5];
-        //            switch(site)
-        //            {
-        //                case "CHB":
-        //                    if (empId.Length < 6)
-        //                    {
-        //                        var add = 6 - empId.Length;
-        //                        for (var i = 0; i < add; i++)
-        //                            empId = "0" + empId;                                    
-        //                    }
-
-        //                    break;
-        //            }
-        //            cols.EmployeeId = empId;
-        //            cols.Col7 = parts[6];
-        //            cols.Col8 = parts[7];
-        //            cols.Col9 = parts[8];
-        //            cols.StartDate = parts[9];
-        //            cols.EndDate = parts[10];
-
-        //            lines.Add(cols);
-        //            // Console.WriteLine("{0} field(s)", parts.Length);
-        //        }
-        //    }
-        //    return lines;
-        //}
-
     }
 
+    #region classes
     public class PostTest
     {
         public int PostTestCompletedId { get; set; }
@@ -1289,4 +1224,5 @@ namespace PostTestsService
             return sb.ToString();
         }
     }
+    #endregion classes
 }
