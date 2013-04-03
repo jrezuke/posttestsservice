@@ -866,7 +866,6 @@ namespace PostTestsService
                             {
 
                                 //this is temporary - take this out after May 1
-
                                 #region tempDateCompleted
 
                                 var dateCompleted = postTest.DateCompleted.GetValueOrDefault();
@@ -876,14 +875,17 @@ namespace PostTestsService
                                 var nextDueDate = dateCompleted.AddYears(1);
 
                                 #endregion tempDateCompleted
-
+                                //assign the next due date to the staff member
+                                //this works because the completed tests are in dateCompleted order 
                                 if (ptnd.NextDueDate == null)
                                     ptnd.NextDueDate = postTest.DateCompleted.Value.AddYears(1);
-
-                                //var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
+                                
                                 var tsDayWindow = nextDueDate - DateTime.Now;
                                 if (tsDayWindow.Days <= 30)
                                 {
+                                    //if within window
+                                    //the staff member can both be due and expired
+                                    //the test is one or the other
                                     if (tsDayWindow.Days < 0)
                                     {
                                         postTest.IsExpired = true;
@@ -899,7 +901,7 @@ namespace PostTestsService
 
                             //remove this from the tests not completed list
                             ptnd.TestsNotCompleted.Remove(postTest.Name);
-
+                            //add to the tests completed
                             ptnd.TestsCompleted.Add(postTest);
                         }
                         rdr.Close();
