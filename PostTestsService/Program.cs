@@ -12,25 +12,34 @@ using System.Web.Security;
 
 namespace PostTestsService
 {
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="noEmails"></param>
-    /// use noEmails argument when you want to run this program on mondays and not send an email
-    /// this sets _bSendEmails to false
-    /// <param name="forceEmails"></param>
-    /// use forceEmails to send emails on any day
-    /// this sets _bForceEmails to true
+    
     class Program
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private static bool _bSendEmails = true;
-        private static bool _bForceEmails = false;
+        private static bool _bForceEmails;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param>
+        ///     <name>noEmails</name>
+        /// </param>
+        /// use noEmails argument when you want to run this program on mondays and not send an email
+        /// this sets _bSendEmails to false
+        /// <param>
+        ///     <name>forceEmails</name>
+        /// </param>
+        /// use forceEmails to send emails on any day
+        /// this sets _bForceEmails to true
+        /// <param name="args"></param>
+        /// Accepts noEmails and forceEmails as arguments
+        /// 
         static void Main(string[] args)
         {
             Logger.Info("Starting PostTests Service");
 
+            //delete lists older than 7 days
             DeleteOldOperatorsLists();
             
             if (args.Length > 0)
@@ -57,6 +66,7 @@ namespace PostTestsService
                 //if (si.Id > 1)
                 //    continue;
 
+                //initialize email lists
                 si.SiteEmailLists = new SiteEmailLists
                                         {
                                             SiteId = si.Id,
@@ -415,8 +425,10 @@ namespace PostTestsService
                     if (!si.EmpIdRequired)
                         continue;
 
-                    SendCoordinatorsEmail(si.Id, si.Name, si.SiteEmailLists, path);
-
+                    if (_bSendEmails)
+                    {
+                        SendCoordinatorsEmail(si.Id, si.Name, si.SiteEmailLists, path);
+                    }
                 } //foreach (var si in sites) - tests not completed
             }
             //Console.Read();
@@ -641,8 +653,16 @@ namespace PostTestsService
             Console.Write("To:" + toAddress[0]);
             //Console.Write("Email:" + sb);
 
-            var smtp = new SmtpClient();
-            smtp.Send(mm);
+            try
+            {
+                var smtp = new SmtpClient();
+                smtp.Send(mm);
+            }
+            catch (Exception ex)
+            {
+                Logger.Info(ex.Message);
+            }
+            
         }
 
         internal static List<MembershipUser> GetUserInRole(string role, int site)
