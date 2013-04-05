@@ -289,9 +289,9 @@ namespace PostTestsService
                 } //foreach (var ptnd in ptndl)
             }
 
-            //now update the nova net files
+            //create the nova net files
             Console.WriteLine("-------------------------");
-            Console.WriteLine("Updating nova net files");
+            Console.WriteLine("creating nova net files");
             Console.WriteLine("-------------------------");
 
             //iterate sites
@@ -310,55 +310,13 @@ namespace PostTestsService
 
                 //create the new list
                 var lines = new List<NovaNetColumns>();
-
-                //var lines =  GetNovaNetFile(si.Name);
-                //if (lines == null)
-                //{
-                //    Console.WriteLine("No current nova net list for site:" + si.Name);
-                //    Logger.Info("No current nova net list for site:" + si.Name);
-                //    Console.WriteLine("created new list");
-                //    Logger.Info("created new list");
-
-                //    //create the new list
-                //    lines = new List<NovaNetColumns>();
-                //}
-
+                
                 //iterate people
-                //Logger.Info("sitePtnd2List.Find(x => x.SiteId == si.Id)");
                 foreach (var ptnd in si.PostTestNextDues)
                 {
                     if (!ptnd.IsOkForList)
                         continue;
-
-                    //NovaNetColumns line = lines.Find(c => c.EmployeeId == ptnd.EmployeeId );
-                    //if (line != null)
-                    //{
-                    //    //make sure they are certified - if not then remove
-                    //    //this is now handled in postTestNextDues2  
-                    //    //if ((!ptnd.IsNovaStatStripTested) || (!ptnd.IsVampTested))
-                    //    //{
-                    //    //    lines.Remove(line);
-                    //    //    siteEmailList.StaffRemovedList.Add(ptnd);
-                    //    //    continue;
-                    //    //}
-
-                    //    line.Found = true;
-                    //    //var lineDate = DateTime.Parse(line.EndDate);
-                    //    var endDate = DateTime.Now.AddYears(1);
-                    //    if(! string.IsNullOrEmpty(ptnd.SNextDueDate))
-                    //        endDate = DateTime.Parse(ptnd.SNextDueDate);
-
-                    //    //update the line end date
-                    //    line.EndDate = endDate.ToString("M/d/yyyy");
-                    //}
-                    //else //this is a new operator
-                    //{
-                    //make sure they are certified - if not then don't add
-                    //if ((!ptnd.IsNovaStatStripTested) || (!ptnd.IsVampTested))
-                    //    continue;
-
-                    //email coord
-                    //si.SiteEmailLists.StaffAddedList.Add(ptnd);
+                    
                     var nnc = new NovaNetColumns();
                     var sep = new[] { ',' };
                     var names = ptnd.Name.Split(sep);
@@ -377,20 +335,16 @@ namespace PostTestsService
                     nnc.StartDate = startDate.ToString("M/d/yyyy");
                     nnc.EndDate = ptnd.NextDueDate.Value.ToString("M/d/yyyy");
                     lines.Add(nnc);
-                    //}
-
+                    
                     Console.WriteLine(ptnd.Name + ":" + ptnd.SNextDueDate + ", email: " + ptnd.Email + ", Employee ID: " + ptnd.EmployeeId);
                 }
-
-                //remove the nn lines that were not found
-
-
+                
                 //write lines to new file
                 WriteNovaNetFile(lines, si.Name, si.SiteId);
                 Logger.Info("WriteNovaNetFile:" + si.Name);
             }//foreach (var si in sites) - write file
 
-            if (_bSendEmails)
+            if (_bSendEmails || _bForceEmails)
             {
                 foreach (var si in sites)
                 {
@@ -401,12 +355,10 @@ namespace PostTestsService
                     //skip for sites not needed
                     if (!si.EmpIdRequired)
                         continue;
-
-                    if (_bSendEmails)
-                    {
-                        SendCoordinatorsEmail(si.Id, si.Name, si.SiteEmailLists, path);
-                    }
-                } //foreach (var si in sites) - tests not completed
+                    
+                    SendCoordinatorsEmail(si.Id, si.Name, si.SiteEmailLists, path);
+                    
+                }//foreach (var si in sites) - tests not completed
             }
             //Console.Read();
         }
@@ -571,7 +523,7 @@ namespace PostTestsService
                 sbBody.Append("</table></div>");
 
             }
-
+            
             SendHtmlEmail("Post Tests Notifications - " + siteName, coordinators.Select(coord => coord.Email).ToArray(), null, sbBody.ToString(), path, @"<a href='http://halfpintstudy.org/hpProd/'>Halfpint Study Website</a>");
         }
 
