@@ -149,30 +149,7 @@ namespace PostTestsService
                     string body;
                     string[] to;
                     var bTempIncludOnList = false;
-                    //var bIsDue = false;
-
-                    //don't require overview for the second year so don't list it on tests completed
-                    //postTestNextDue.TestsCompleted.RemoveAll(x => x.Name == "Overview");
-                    //foreach (var postTest in postTestNextDue.TestsCompleted)
-                    //{
-                    //    //if not current, this means that the staff member has less than 30 days to complete this test before it expires
-                    //    //if (!postTest.IsCurrent)
-                    //    //    bIsDue = true;
-
-                    //    var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
-                    //    var tsDayWindow = nextDueDate - DateTime.Now;
-                    //    if (tsDayWindow.Days > 30)
-                    //        continue;
-
-                    //    //within the 30 day window
-                    //    //set the test as non-current so that the user can re-take the test
-                    //    //done to do - uncomment this for prod
-                    //    var retVal = SetPostTestCompletedNotCurrent(postTest.PostTestCompletedId);
-                    //    Logger.Info("Test " + postTest.Name + " , date completed:" + postTest.DateCompleted.Value.ToShortDateString() + " set IsCurrent=0: " + retVal);
-
-                    //    bIsDue = true;
-                    //}
-
+                    
                     //see if all required post tests are completed
                     if (postTestNextDue.TestsNotCompleted.Count > 0)
                     {
@@ -247,7 +224,7 @@ namespace PostTestsService
                         }
                         if (!bTempIncludOnList)
                             continue;
-                    }
+                    }//if (postTestNextDue.TestsNotCompleted.Count > 0)
 
                     //else all tests are completed
                     {
