@@ -110,7 +110,7 @@ namespace PostTestsService
                         //make sure they are nova net certified
                         if (!postTestNextDue.IsNovaStatStripTested)
                         {
-                            Logger.Info("NovaStatStrip competency needed for " + postTestNextDue.Name);
+                            //Logger.Info("NovaStatStrip competency needed for " + postTestNextDue.Name);
                             si.SiteEmailLists.CompetencyMissingList.Add(postTestNextDue);
                             bContinue = true;
                         }
@@ -120,7 +120,7 @@ namespace PostTestsService
                         //make sure they are nova net and vamp certified
                         if ((!postTestNextDue.IsNovaStatStripTested) || (!postTestNextDue.IsVampTested))
                         {
-                            Logger.Info("Competency needed for " + postTestNextDue.Name);
+                            //Logger.Info("Competency needed for " + postTestNextDue.Name);
                             si.SiteEmailLists.CompetencyMissingList.Add(postTestNextDue);
                             bContinue = true;
                         }
@@ -128,7 +128,7 @@ namespace PostTestsService
 
                     if (string.IsNullOrEmpty(postTestNextDue.Email))
                     {
-                        Logger.Info("Email missing for " + postTestNextDue.Name);
+                        //Logger.Info("Email missing for " + postTestNextDue.Name);
                         si.SiteEmailLists.EmailMissingList.Add(postTestNextDue);
                         bContinue = true;
                     }
@@ -137,7 +137,7 @@ namespace PostTestsService
 
                     if (string.IsNullOrEmpty(postTestNextDue.EmployeeId))
                     {
-                        Logger.Info("Employee ID missing for " + postTestNextDue.Name);
+                        //Logger.Info("Employee ID missing for " + postTestNextDue.Name);
                         si.SiteEmailLists.EmployeeIdMissingList.Add(postTestNextDue);
                         bContinue = true;
                     }
@@ -344,6 +344,10 @@ namespace PostTestsService
                 Logger.Info("WriteNovaNetFile:" + si.Name);
             }//foreach (var si in sites) - write file
 
+            //send coordinator emails
+            Console.WriteLine("-------------------------");
+            Console.WriteLine("send coordinator emails");
+            Console.WriteLine("-------------------------");
             if (_bSendEmails || _bForceEmails)
             {
                 foreach (var si in sites)
@@ -357,7 +361,7 @@ namespace PostTestsService
                         continue;
                     
                     SendCoordinatorsEmail(si.Id, si.Name, si.SiteEmailLists, path);
-                    
+                    Logger.Info("Send email:" + si.Name);
                 }//foreach (var si in sites) - tests not completed
             }
             //Console.Read();
