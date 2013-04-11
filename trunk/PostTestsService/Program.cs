@@ -369,6 +369,7 @@ namespace PostTestsService
 
         private static void DeleteOldOperatorsLists()
         {
+            
             var folderPath = ConfigurationManager.AppSettings["StatStripListPath"];
             var di = new DirectoryInfo(folderPath);
             
