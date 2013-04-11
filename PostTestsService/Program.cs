@@ -38,9 +38,6 @@ namespace PostTestsService
         static void Main(string[] args)
         {
             Logger.Info("Starting PostTests Service");
-
-            //delete lists older than 7 days
-            DeleteOldOperatorsLists();
             
             if (args.Length > 0)
             {
@@ -62,9 +59,12 @@ namespace PostTestsService
             //iterate sites
             foreach (var si in sites.Where(si => si.EmpIdRequired))
             {
-                //done - to do - comment this for prod
-                //if (si.Id > 1)
-                //    continue;
+                Console.WriteLine(si.Name);
+                Logger.Info("For Site:" + si.Name + " - " + si.SiteId);
+
+                //delete lists older than 7 days
+                DeleteOldOperatorsLists(si.SiteId);
+                Logger.Info("Delete old files");
 
                 //initialize email lists
                 si.SiteEmailLists = new SiteEmailLists
@@ -80,9 +80,7 @@ namespace PostTestsService
                                         };
 
 
-                Console.WriteLine(si.Name);
-                Logger.Info("For Site:" + si.Name + " - " + si.SiteId);
-
+                
                 //Get staff info including next due date, tests not completed, is new staff - next due date will be 1 year from today for new staff
                 //staff roles not included are Admin, DCC , Nurse generic (nurse accounts with a user name)
                 si.PostTestNextDues = GetStaffPostTestsCompletedInfo(si.Id);
@@ -330,6 +328,8 @@ namespace PostTestsService
                     nnc.Col8 = "O";
                     nnc.Col9 = "Glucose";
 
+                    //this is temporary
+                    if(ptnd.NextDueDate.Value.CompareTo())
                     DateTime startDate = DateTime.Now;
 
                     nnc.StartDate = startDate.ToString("M/d/yyyy");
@@ -367,11 +367,12 @@ namespace PostTestsService
             //Console.Read();
         }
 
-        private static void DeleteOldOperatorsLists()
+        private static void DeleteOldOperatorsLists(string siteCode)
         {
             
             var folderPath = ConfigurationManager.AppSettings["StatStripListPath"];
-            var di = new DirectoryInfo(folderPath);
+            var path = Path.Combine(folderPath, siteCode);
+            var di = new DirectoryInfo(path);
             
             var files = from f in di.GetFiles()
                 where f.LastWriteTime < DateTime.Now.AddDays(-7)
