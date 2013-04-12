@@ -327,10 +327,8 @@ namespace PostTestsService
                     nnc.Col7 = "T";
                     nnc.Col8 = "O";
                     nnc.Col9 = "Glucose";
-
-                    //this is temporary
-                    if(ptnd.NextDueDate.Value.CompareTo())
-                    DateTime startDate = DateTime.Now;
+                    
+                    var startDate = ptnd.NextDueDate.Value.AddMonths(-2);
 
                     nnc.StartDate = startDate.ToString("M/d/yyyy");
                     nnc.EndDate = ptnd.NextDueDate.Value.ToString("M/d/yyyy");
@@ -825,8 +823,10 @@ namespace PostTestsService
 
                                 var dateCompleted = postTest.DateCompleted.GetValueOrDefault();
                                 if (dateCompleted.CompareTo(DateTime.Parse("05/01/2012")) < 0)
+                                {
+                                    postTest.DateCompleted = DateTime.Parse("05/01/12");
                                     dateCompleted = DateTime.Parse("05/01/2012");
-
+                                }
                                 var nextDueDate = dateCompleted.AddYears(1);
 
                                 #endregion tempDateCompleted
