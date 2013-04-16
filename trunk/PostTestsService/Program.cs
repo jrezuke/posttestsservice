@@ -318,8 +318,8 @@ namespace PostTestsService
                     var nnc = new NovaNetColumns();
                     var sep = new[] { ',' };
                     var names = ptnd.Name.Split(sep);
-                    nnc.LastName = names[1];
-                    nnc.FirstName = names[0];
+                    nnc.LastName = names[0];
+                    nnc.FirstName = names[1];
                     nnc.Col3 = "ALL";
                     nnc.Col4 = "ALL";
                     nnc.Col5 = "StatStrip";
@@ -327,8 +327,8 @@ namespace PostTestsService
                     nnc.Col7 = "T";
                     nnc.Col8 = "O";
                     nnc.Col9 = "Glucose";
-                    
-                    var startDate = ptnd.NextDueDate.Value.AddMonths(-2);
+
+                    var startDate = DateTime.Now.AddMonths(-12);
 
                     nnc.StartDate = startDate.ToString("M/d/yyyy");
                     nnc.EndDate = ptnd.NextDueDate.Value.ToString("M/d/yyyy");
@@ -919,7 +919,7 @@ namespace PostTestsService
             var sw = new StreamWriter(fullpath, false);
 
 
-            sw.WriteLine("NovaStatStrip Operator Import Data,version 2.0,,,,,,,,,");
+            sw.WriteLine("Novanet Operator Import Data,version 2.0,,,,,,,,,");
             foreach (var line in lines)
             {
                 sw.Write(line.LastName + ",");
