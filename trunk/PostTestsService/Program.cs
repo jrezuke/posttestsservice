@@ -370,13 +370,15 @@ namespace PostTestsService
             
             var folderPath = ConfigurationManager.AppSettings["StatStripListPath"];
             var path = Path.Combine(folderPath, siteCode);
-            var di = new DirectoryInfo(path);
             
-            var files = from f in di.GetFiles()
-                where f.LastWriteTime < DateTime.Now.AddDays(-7)
-                select f;
-            files.ToList().ForEach(f => f.Delete());
-
+            var di = new DirectoryInfo(path);
+            if (di.Exists)
+            {
+                var files = from f in di.GetFiles()
+                            where f.LastWriteTime < DateTime.Now.AddDays(-7)
+                            select f;
+                files.ToList().ForEach(f => f.Delete());
+            }
         }
 
         internal static void SendCoordinatorsEmail(int site, string siteName, SiteEmailLists siteEmailLists, string path)
