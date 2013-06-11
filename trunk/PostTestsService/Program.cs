@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using System.Data.SqlClient;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -388,7 +389,8 @@ namespace PostTestsService
 
         internal static void SendCoordinatorsEmail(SiteInfo si, string path)
         {
-            var coordinators = GetUserInRole("Coordinator", si.Id);
+            var coordinators = GetStaffForEvent(8, si.Id);
+            
             var sbBody = new StringBuilder("");
             const string newLine = "<br/>";
 
@@ -543,7 +545,7 @@ namespace PostTestsService
 
             }
             
-            SendHtmlEmail("Post Tests Notifications - " + si.Name, coordinators.Select(coord => coord.Email).ToArray(), null, sbBody.ToString(), path, @"<a href='http://halfpintstudy.org/hpProd/'>Halfpint Study Website</a>");
+            SendHtmlEmail("Post Tests Notifications - " + si.Name, coordinators.ToArray(), null, sbBody.ToString(), path, @"<a href='http://halfpintstudy.org/hpProd/'>Halfpint Study Website</a>");
         }
 
         internal static void SendHtmlEmail(string subject, string[] toAddress, string[] ccAddress, string bodyContent, string appPath, string url, string bodyHeader = "")
@@ -612,6 +614,56 @@ namespace PostTestsService
             }
             
         }
+
+        internal static List<string> GetStaffForEvent(int eventId, int siteId)
+        {
+            var emails = new List<string>();
+
+            var connStr = ConfigurationManager.ConnectionStrings["Halfpint"].ToString();
+            using (var conn = new SqlConnection(connStr))
+            {
+                var cmd = new SqlCommand
+                {
+                    CommandType = CommandType.StoredProcedure,
+                    CommandText = "GetNotificationsStaffForEvent",
+                    Connection = conn
+                };
+                var param = new SqlParameter("@eventId", eventId);
+                cmd.Parameters.Add(param);
+
+                conn.Open();
+                SqlDataReader rdr = cmd.ExecuteReader();
+                int pos = 0;
+
+                while (rdr.Read())
+                {
+                    pos = rdr.GetOrdinal("AllSites");
+                    var isAllSites = rdr.GetBoolean(pos);
+
+                    pos = rdr.GetOrdinal("Email");
+                    if (rdr.IsDBNull(pos))
+                        continue;
+                    var email = rdr.GetString(pos);
+
+                    if (isAllSites)
+                    {
+                        emails.Add(email);
+                        continue;
+                    }
+
+                    pos = rdr.GetOrdinal("SiteID");
+                    var site = rdr.GetInt32(pos);
+
+                    if (site == siteId)
+                        emails.Add(email);
+
+                }
+                rdr.Close();
+            }
+
+            return emails;
+        }
+
 
         internal static List<MembershipUser> GetUserInRole(string role, int site)
         {
