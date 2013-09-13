@@ -391,6 +391,10 @@ namespace PostTestsService
         {
             var coordinators = GetStaffForEvent(8, si.Id);
             
+            if (coordinators.Count == 0)
+                return;
+
+            //Logger.Info("after GetStaffForEvent");
             var sbBody = new StringBuilder("");
             const string newLine = "<br/>";
 
@@ -435,6 +439,8 @@ namespace PostTestsService
                 sbBody.Append("</table>");
             }
 
+            //Logger.Info("after si.SiteEmailLists.CompetencyMissingList.Count");
+
             if (si.SiteEmailLists.EmailMissingList.Count > 0)
             {
                 var emailMissingSortedList = si.SiteEmailLists.EmailMissingList.OrderBy(x => x.Name).ToList();
@@ -463,7 +469,8 @@ namespace PostTestsService
                 }
                 sbBody.Append("</table></div>");
             }
-
+            //Logger.Info("after si.SiteEmailLists.EmployeeIdMissingList.Count");
+            
             if (si.SiteEmailLists.NewStaffList.Count == 0)
             { }
             else
@@ -479,23 +486,31 @@ namespace PostTestsService
                 }
                 sbBody.Append("</table>");
             }
+            //Logger.Info("after (si.SiteEmailLists.NewStaffList.Count");
 
             if (si.SiteEmailLists.ExpiredList.Count == 0)
             { }
             else
             {
                 var expiredSortedList = si.SiteEmailLists.ExpiredList.OrderBy(x => x.Name).ToList();
+                //Logger.Info("after var expiredSortedList");
+
                 sbBody.Append("<h3>The following expired staff members have not completed their annual post tests.</h3>");
 
                 sbBody.Append("<table style='border-collapse:collapse;' cellpadding='5' border='1'><tr style='background-color:87CEEB'><th>Name</th><th>Role</th><th>Due Date</th><th>Email</th></tr>");
+                
                 foreach (var ptnd in expiredSortedList)
                 {
+                    //Logger.Info("in foreach (var ptnd in expiredSortedList)");
                     Debug.Assert(ptnd.NextDueDate != null, "ptnd.NextDueDate != null");
-                    sbBody.Append("<tr><td>" + ptnd.Name + "</td><td>" + ptnd.Role + "</td><td>" + ptnd.NextDueDate.Value.ToShortDateString() + "</td><td>" + ptnd.Email +
+                    if(ptnd.NextDueDate !=null)
+                        sbBody.Append("<tr><td>" + ptnd.Name + "</td><td>" + ptnd.Role + "</td><td>" + ptnd.NextDueDate.Value.ToShortDateString() + "</td><td>" + ptnd.Email +
                                   "</td></tr>");
                 }
+                //Logger.Info("after foreach (var ptnd in expiredSortedList)");
                 sbBody.Append("</table>");
             }
+            //Logger.Info("after si.SiteEmailLists.ExpiredList.Count");
 
             if (si.SiteEmailLists.DueList.Count == 0)
                 sbBody.Append("<h3>There are no staff members due to take their annual post tests.</h3>");
@@ -513,6 +528,7 @@ namespace PostTestsService
                 }
                 sbBody.Append("</table>");
             }
+            //Logger.Info("after si.SiteEmailLists.DueList.Count");
 
             if (si.SiteEmailLists.StaffTestsNotCompletedList.Count > 0)
             {
@@ -542,7 +558,7 @@ namespace PostTestsService
 
                 }
                 sbBody.Append("</table></div>");
-
+                //Logger.Info("after si.SiteEmailLists.StaffTestsNotCompletedList.Count");
             }
             
             SendHtmlEmail("Post Tests Notifications - " + si.Name, coordinators.ToArray(), null, sbBody.ToString(), path, @"<a href='http://halfpintstudy.org/hpProd/'>Halfpint Study Website</a>");
@@ -550,7 +566,6 @@ namespace PostTestsService
 
         internal static void SendHtmlEmail(string subject, string[] toAddress, string[] ccAddress, string bodyContent, string appPath, string url, string bodyHeader = "")
         {
-
             if (toAddress.Length == 0)
                 return;
             var mm = new MailMessage { Subject = subject, Body = bodyContent };
@@ -1105,6 +1120,16 @@ namespace PostTestsService
 
     public class SiteEmailLists
     {
+        public SiteEmailLists()
+        {
+            NewStaffList = new List<PostTestNextDue>();
+            ExpiredList = new List<PostTestNextDue>();
+            DueList = new List<PostTestNextDue>();
+            CompetencyMissingList = new List<PostTestNextDue>();
+            EmailMissingList = new List<PostTestNextDue>();
+            EmployeeIdMissingList = new List<PostTestNextDue>();
+            StaffTestsNotCompletedList = new List<StaffTestsNotCompletedList>();
+        }
         public int SiteId { get; set; }
         public List<PostTestNextDue> NewStaffList { get; set; }
         public List<PostTestNextDue> ExpiredList { get; set; }
