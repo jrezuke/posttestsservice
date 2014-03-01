@@ -4,6 +4,7 @@ using System.Data.SqlClient;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Policy;
 using System.Text;
 using NLog;
 using System.Configuration;
@@ -104,29 +105,61 @@ namespace PostTestsService
                     Console.WriteLine(postTestNextDue.Name + ", email: " + postTestNextDue.Email + ", Employee ID: " + postTestNextDue.EmployeeId + ", Role: " + postTestNextDue.Role);
                     //Logger.Info("For staff member:" + postTestNextDue.Name + ", email: " + postTestNextDue.Email + ", Employee ID: " + postTestNextDue.EmployeeId + ", Role: " + postTestNextDue.Role);
 
-                    if (si.SiteId != "14")
+                    switch (si.SiteId)
                     {
-                        if (postTestNextDue.Role != "Nurse")
-                        {
-                            //make sure they are nova net certified
-                            if (!postTestNextDue.IsNovaStatStripTested)
+                        case "09":
+                        case "13":
+                            //make sure they are vamp certified
+                            if (postTestNextDue.Role == "Nurse")
                             {
-                                //Logger.Info("NovaStatStrip competency needed for " + postTestNextDue.Name);
-                                si.SiteEmailLists.CompetencyMissingList.Add(postTestNextDue);
-                                bContinue = true;
+                                if (!postTestNextDue.IsVampTested)
+                                {
+                                    //Logger.Info("Competency needed for " + postTestNextDue.Name);
+                                    si.SiteEmailLists.CompetencyMissingList.Add(postTestNextDue);
+                                    bContinue = true;
+                                }
                             }
-                        }
-                        else
-                        {
-                            //make sure they are nova net and vamp certified
-                            if ((!postTestNextDue.IsNovaStatStripTested) || (!postTestNextDue.IsVampTested))
+                            break;
+                        case "14":
+                            break;
+                        case "15":
+                            if (postTestNextDue.Role != "Nurse")
                             {
-                                //Logger.Info("Competency needed for " + postTestNextDue.Name);
-                                si.SiteEmailLists.CompetencyMissingList.Add(postTestNextDue);
-                                bContinue = true;
+                                //make sure they are nova net certified
+                                if (!postTestNextDue.IsNovaStatStripTested)
+                                {
+                                    //Logger.Info("NovaStatStrip competency needed for " + postTestNextDue.Name);
+                                    si.SiteEmailLists.CompetencyMissingList.Add(postTestNextDue);
+                                    bContinue = true;
+                                }
                             }
-                        }
+                            break;
+                        case "20":
+                            break;
+                        default:
+                            if (postTestNextDue.Role != "Nurse")
+                            {
+                                //make sure they are nova net certified
+                                if (!postTestNextDue.IsNovaStatStripTested)
+                                {
+                                    //Logger.Info("NovaStatStrip competency needed for " + postTestNextDue.Name);
+                                    si.SiteEmailLists.CompetencyMissingList.Add(postTestNextDue);
+                                    bContinue = true;
+                                }
+                            }
+                            else
+                            {
+                                //make sure they are nova net and vamp certified
+                                if ((!postTestNextDue.IsNovaStatStripTested) || (!postTestNextDue.IsVampTested))
+                                {
+                                    //Logger.Info("Competency needed for " + postTestNextDue.Name);
+                                    si.SiteEmailLists.CompetencyMissingList.Add(postTestNextDue);
+                                    bContinue = true;
+                                }
+                            }
+                            break;
                     }
+                    
 
                     if (string.IsNullOrEmpty(postTestNextDue.Email))
                     {
@@ -156,16 +189,16 @@ namespace PostTestsService
                     if (postTestNextDue.TestsNotCompleted.Count > 0)
                     {
                         //todo - this is temporary - you can get rid of this after 9/1/13
-                        if (postTestNextDue.TestsNotCompleted.Count == 1)
-                        {
-                            if (DateTime.Today.CompareTo(new DateTime(2013, 9, 1)) < 0)
-                            {
-                                if (postTestNextDue.TestsNotCompleted[0] == "Dexcom G4 Receiver")
-                                {
-                                    bTempIncludOnList = true;
-                                }
-                            }
-                        }
+                        //if (postTestNextDue.TestsNotCompleted.Count == 1)
+                        //{
+                        //    if (DateTime.Today.CompareTo(new DateTime(2013, 9, 1)) < 0)
+                        //    {
+                        //        if (postTestNextDue.TestsNotCompleted[0] == "Dexcom G4 Receiver")
+                        //        {
+                        //            bTempIncludOnList = true;
+                        //        }
+                        //    }
+                        //}
 
                         if (!bTempIncludOnList)
                         {
@@ -423,18 +456,47 @@ namespace PostTestsService
                         email = ptnd.Email;
 
                     var test = "";
-                    if (!ptnd.IsNovaStatStripTested)
-                        test = "NovaStatStrip ";
-                    if (ptnd.Role == "Nurse")
+
+                    switch (si.SiteId)
                     {
-                        if (!ptnd.IsVampTested)
-                        {
-                            if (test.Length > 0)
-                                test += " and ";
-                            test += "Vamp Jr";
-                        }
+                        case "09": case "13":
+                            if (ptnd.Role == "Nurse")
+                            {
+                                if (!ptnd.IsVampTested)
+                                {
+                                    if (test.Length > 0)
+                                        test += " and ";
+                                    test += "Vamp Jr";
+                                }
+                            }
+                            break;
+                        case "14":
+                            break;
+                        case "15":
+                            if (!ptnd.IsNovaStatStripTested)
+                                test = "NovaStatStrip ";
+                            break;
+                        case "20":
+                            break;
+                         
+                        default:
+                            if (!ptnd.IsNovaStatStripTested)
+                                test = "NovaStatStrip ";
+                            if (ptnd.Role == "Nurse")
+                            {
+                                if (!ptnd.IsVampTested)
+                                {
+                                    if (test.Length > 0)
+                                        test += " and ";
+                                    test += "Vamp Jr";
+                                }
+                            }
+                            break;
                     }
-                    sbBody.Append("<tr><td>" + ptnd.Name + "</td><td>" + ptnd.Role + "</td><td>" + test + "</td><td>" + email + "</td></tr>");
+                        
+                    sbBody.Append("<tr><td>" + ptnd.Name + "</td><td>" + ptnd.Role + "</td><td>" + test +
+                                      "</td><td>" + email + "</td></tr>");
+                    
                 }
                 sbBody.Append("</table>");
             }
@@ -945,11 +1007,20 @@ namespace PostTestsService
                         conn.Close();
 
                         //remove for exceptions
-                        if (siteCode == "14")
+                        if (siteCode == "14" || siteCode == "20")
                         {
                             ptnd.TestsNotCompleted.Remove("NovaStatStrip");
                             ptnd.TestsNotCompleted.Remove("VampJr");
+                        }
 
+                        if (siteCode == "09" || siteCode == "13")
+                        {
+                            ptnd.TestsNotCompleted.Remove("NovaStatStrip");
+                        }
+
+                        if (siteCode == "15")
+                        {
+                            ptnd.TestsNotCompleted.Remove("VampJr");
                         }
 
                         if (ptnd.TestsCompleted.Count == 0 || (ptnd.TestsNotCompleted.Contains("Overview")))
