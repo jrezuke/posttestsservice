@@ -1088,7 +1088,10 @@ namespace PostTestsService
                 sw.Write(line.Col3 + ",");
                 sw.Write(line.Col4 + ",");
                 sw.Write(line.Col5 + ",");
-                sw.Write(line.EmployeeId + ",");
+                if(siteCode == "20")
+                    sw.Write("U" + line.EmployeeId + ",");
+                else
+                    sw.Write(line.EmployeeId + ",");
                 sw.Write(line.Col7 + ",");
                 sw.Write(line.Col8 + ",");
                 sw.Write(line.Col9 + ",");
