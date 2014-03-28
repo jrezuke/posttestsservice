@@ -39,6 +39,13 @@ namespace PostTestsService
         /// 
         static void Main(string[] args)
         {
+            //for (int i = 0; i < 35; i++)
+            //{
+            //    Console.WriteLine("i:" + i);
+            //    DoTest(i);
+            //}
+            //Console.Read();
+            //return;
             Logger.Info("Starting PostTests Service");
             
             if (args.Length > 0)
@@ -109,6 +116,7 @@ namespace PostTestsService
                     {
                         case "09":
                         case "13":
+                        case "31":
                             //make sure they are vamp certified
                             if (postTestNextDue.Role == "Nurse")
                             {
@@ -121,6 +129,7 @@ namespace PostTestsService
                             }
                             break;
                         case "14":
+                        case "20":
                             break;
                         case "15":
                             if (postTestNextDue.Role != "Nurse")
@@ -133,8 +142,6 @@ namespace PostTestsService
                                     bContinue = true;
                                 }
                             }
-                            break;
-                        case "20":
                             break;
                         default:
                             if (postTestNextDue.Role != "Nurse")
@@ -188,18 +195,6 @@ namespace PostTestsService
                     //see if all required post tests are completed
                     if (postTestNextDue.TestsNotCompleted.Count > 0)
                     {
-                        //todo - this is temporary - you can get rid of this after 9/1/13
-                        //if (postTestNextDue.TestsNotCompleted.Count == 1)
-                        //{
-                        //    if (DateTime.Today.CompareTo(new DateTime(2013, 9, 1)) < 0)
-                        //    {
-                        //        if (postTestNextDue.TestsNotCompleted[0] == "Dexcom G4 Receiver")
-                        //        {
-                        //            bTempIncludOnList = true;
-                        //        }
-                        //    }
-                        //}
-
                         if (!bTempIncludOnList)
                         {
                             if (postTestNextDue.IsNew)
@@ -404,6 +399,32 @@ namespace PostTestsService
             //Console.Read();
         }
 
+        private static void DoTest(int ii)
+        {
+            var i = ii.ToString();
+            switch (i)
+            {
+                case "9":
+                case "13":
+                case "31":
+                    Console.WriteLine("****9 or 13 or 31");
+                    break;
+                case "14":
+                    Console.WriteLine("****14");
+                    break;
+                case "15":
+                    Console.WriteLine("****15");
+                    break;
+                case "20":
+                    break;
+                    break;
+                default:
+                    Console.WriteLine("default");
+                    break;
+            }
+                    
+        }
+
         private static void DeleteOldOperatorsLists(string siteCode)
         {
             
@@ -459,7 +480,9 @@ namespace PostTestsService
 
                     switch (si.SiteId)
                     {
-                        case "09": case "13":
+                        case "09": 
+                        case "13": 
+                        case "31":
                             if (ptnd.Role == "Nurse")
                             {
                                 if (!ptnd.IsVampTested)
@@ -471,14 +494,12 @@ namespace PostTestsService
                             }
                             break;
                         case "14":
+                        case "20":
                             break;
                         case "15":
                             if (!ptnd.IsNovaStatStripTested)
                                 test = "NovaStatStrip ";
                             break;
-                        case "20":
-                            break;
-                         
                         default:
                             if (!ptnd.IsNovaStatStripTested)
                                 test = "NovaStatStrip ";
@@ -1013,7 +1034,7 @@ namespace PostTestsService
                             ptnd.TestsNotCompleted.Remove("VampJr");
                         }
 
-                        if (siteCode == "09" || siteCode == "13")
+                        if (siteCode == "09" || siteCode == "13" || siteCode == "31")
                         {
                             ptnd.TestsNotCompleted.Remove("NovaStatStrip");
                         }
