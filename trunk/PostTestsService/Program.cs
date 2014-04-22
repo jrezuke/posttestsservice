@@ -114,6 +114,8 @@ namespace PostTestsService
 
                     switch (si.SiteId)
                     {
+                        case "01":
+                        case "02":
                         case "09":
                         case "13":
                         case "31":
@@ -132,6 +134,7 @@ namespace PostTestsService
                         case "20":
                             break;
                         case "15":
+                        case "21":
                             if (postTestNextDue.Role != "Nurse")
                             {
                                 //make sure they are nova net certified
@@ -404,7 +407,9 @@ namespace PostTestsService
             var i = ii.ToString();
             switch (i)
             {
-                case "9":
+                case "01":
+                case "02":
+                case "09":
                 case "13":
                 case "31":
                     Console.WriteLine("****9 or 13 or 31");
@@ -413,6 +418,7 @@ namespace PostTestsService
                     Console.WriteLine("****14");
                     break;
                 case "15":
+                case "21":
                     Console.WriteLine("****15");
                     break;
                 case "20":
@@ -480,6 +486,8 @@ namespace PostTestsService
 
                     switch (si.SiteId)
                     {
+                        case "01":
+                        case "02":
                         case "09": 
                         case "13": 
                         case "31":
@@ -497,6 +505,7 @@ namespace PostTestsService
                         case "20":
                             break;
                         case "15":
+                        case "21":
                             if (!ptnd.IsNovaStatStripTested)
                                 test = "NovaStatStrip ";
                             break;
@@ -1034,12 +1043,12 @@ namespace PostTestsService
                             ptnd.TestsNotCompleted.Remove("VampJr");
                         }
 
-                        if (siteCode == "09" || siteCode == "13" || siteCode == "31")
+                        if (siteCode == "01" || siteCode == "02" || siteCode == "09" || siteCode == "13" || siteCode == "31")
                         {
                             ptnd.TestsNotCompleted.Remove("NovaStatStrip");
                         }
 
-                        if (siteCode == "15")
+                        if (siteCode == "21" || siteCode == "15")
                         {
                             ptnd.TestsNotCompleted.Remove("VampJr");
                         }
