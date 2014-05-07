@@ -14,7 +14,7 @@ using System.Web.Security;
 
 namespace PostTestsService
 {
-    
+
     class Program
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
@@ -47,7 +47,7 @@ namespace PostTestsService
             //Console.Read();
             //return;
             Logger.Info("Starting PostTests Service");
-            
+
             if (args.Length > 0)
             {
                 if (args[0] == "noEmails")
@@ -68,6 +68,10 @@ namespace PostTestsService
             //iterate sites
             foreach (var si in sites.Where(si => si.EmpIdRequired))
             {
+                if (si.Id != 2)
+                    continue;
+
+
                 Console.WriteLine(si.Name);
                 Logger.Info("For Site:" + si.Name + " - " + si.SiteId);
 
@@ -89,11 +93,11 @@ namespace PostTestsService
                                         };
 
 
-                
+
                 //Get staff info including next due date, tests not completed, is new staff - next due date will be 1 year from today for new staff
                 //staff roles not included are Admin, DCC , Nurse generic (nurse accounts with a user name)
                 si.PostTestNextDues = GetStaffPostTestsCompletedInfo(si.Id, si.SiteId);
-                
+
                 //iterate people                
                 foreach (var postTestNextDue in si.PostTestNextDues)
                 {
@@ -169,7 +173,7 @@ namespace PostTestsService
                             }
                             break;
                     }
-                    
+
 
                     if (string.IsNullOrEmpty(postTestNextDue.Email))
                     {
@@ -194,7 +198,7 @@ namespace PostTestsService
                     string body;
                     string[] to;
                     var bTempIncludOnList = false;
-                    
+
                     //see if all required post tests are completed
                     if (postTestNextDue.TestsNotCompleted.Count > 0)
                     {
@@ -220,7 +224,7 @@ namespace PostTestsService
                                 }
                                 else
                                 {
-                                    if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                                    if (DateTime.Today.DayOfWeek == DayOfWeek.Tuesday)
                                     {
                                         if (_bSendEmails)
                                             SendHtmlEmail(subject, to, null, body, path,
@@ -246,7 +250,7 @@ namespace PostTestsService
                                 }
                                 else
                                 {
-                                    if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                                    if (DateTime.Today.DayOfWeek == DayOfWeek.Tuesday)
                                     {
                                         if (_bSendEmails)
                                             SendHtmlEmail(subject, to, null, body, path,
@@ -282,12 +286,12 @@ namespace PostTestsService
                             }
                             else
                             {
-                                if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                                if (DateTime.Today.DayOfWeek == DayOfWeek.Tuesday)
                                 {
                                     if (_bSendEmails)
                                         SendHtmlEmail(subject, to, null, body, path,
                                                       @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
-                                }    
+                                }
                             }
                         }
 
@@ -309,12 +313,12 @@ namespace PostTestsService
                             }
                             else
                             {
-                                if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                                if (DateTime.Today.DayOfWeek == DayOfWeek.Tuesday)
                                 {
                                     if (_bSendEmails)
                                         SendHtmlEmail(subject, to, null, body, path,
                                                       @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
-                                }   
+                                }
                             }
                         }
                     }
@@ -326,13 +330,13 @@ namespace PostTestsService
             Console.WriteLine("-------------------------");
             Console.WriteLine("creating nova net files");
             Console.WriteLine("-------------------------");
-            
+
             //iterate sites
             foreach (var si in sites)
             {
                 //done to do - comment this for prod
-                //if (si.Id > 1)
-                //    continue;
+                if (si.Id != 2)
+                    continue;
 
                 //skip for sites not needed
                 if (!si.EmpIdRequired)
@@ -343,13 +347,13 @@ namespace PostTestsService
 
                 //create the new list
                 var lines = new List<NovaNetColumns>();
-                
+
                 //iterate people
                 foreach (var ptnd in si.PostTestNextDues)
                 {
                     if (!ptnd.IsOkForList)
                         continue;
-                    
+
                     var nnc = new NovaNetColumns();
                     var sep = new[] { ',' };
                     var names = ptnd.Name.Split(sep);
@@ -368,10 +372,10 @@ namespace PostTestsService
                     nnc.StartDate = startDate.ToString("M/d/yyyy");
                     nnc.EndDate = ptnd.NextDueDate.Value.ToString("M/d/yyyy");
                     lines.Add(nnc);
-                    
+
                     Console.WriteLine(ptnd.Name + ":" + ptnd.SNextDueDate + ", email: " + ptnd.Email + ", Employee ID: " + ptnd.EmployeeId);
                 }
-                
+
                 //write lines to new file
                 WriteNovaNetFile(lines, si.Name, si.SiteId);
                 si.StaffCompleted = lines.Count;
@@ -388,13 +392,13 @@ namespace PostTestsService
                 foreach (var si in sites)
                 {
                     //done to do - comment this for prod
-                    //if (si.Id > 1)
-                    //    continue;
+                    if (si.Id != 2)
+                        continue;
 
                     //skip for sites not needed
                     if (!si.EmpIdRequired)
                         continue;
-                    
+
                     SendCoordinatorsEmail(si, path);
                     Logger.Info("Send email:" + si.Name);
                 }//foreach (var si in sites) - tests not completed
@@ -428,15 +432,15 @@ namespace PostTestsService
                     Console.WriteLine("default");
                     break;
             }
-                    
+
         }
 
         private static void DeleteOldOperatorsLists(string siteCode)
         {
-            
+
             var folderPath = ConfigurationManager.AppSettings["StatStripListPath"];
             var path = Path.Combine(folderPath, siteCode);
-            
+
             var di = new DirectoryInfo(path);
             if (di.Exists)
             {
@@ -450,7 +454,7 @@ namespace PostTestsService
         internal static void SendCoordinatorsEmail(SiteInfo si, string path)
         {
             var coordinators = GetStaffForEvent(8, si.Id);
-            
+
             if (coordinators.Count == 0)
                 return;
 
@@ -467,7 +471,7 @@ namespace PostTestsService
                 percent = si.StaffCompleted * 100 / si.PostTestNextDues.Count;
 
             sbBody.Append("<h2> Total % Staff Post Tests Completed:" + percent + "%</h2>");
-            
+
             if (si.SiteEmailLists.CompetencyMissingList.Count == 0)
                 sbBody.Append("<h3>All staff members have completed threir competency tests.</h3>");
             else
@@ -488,8 +492,8 @@ namespace PostTestsService
                     {
                         case "01":
                         case "02":
-                        case "09": 
-                        case "13": 
+                        case "09":
+                        case "13":
                         case "31":
                             if (ptnd.Role == "Nurse")
                             {
@@ -523,10 +527,10 @@ namespace PostTestsService
                             }
                             break;
                     }
-                        
+
                     sbBody.Append("<tr><td>" + ptnd.Name + "</td><td>" + ptnd.Role + "</td><td>" + test +
                                       "</td><td>" + email + "</td></tr>");
-                    
+
                 }
                 sbBody.Append("</table>");
             }
@@ -562,7 +566,7 @@ namespace PostTestsService
                 sbBody.Append("</table></div>");
             }
             //Logger.Info("after si.SiteEmailLists.EmployeeIdMissingList.Count");
-            
+
             if (si.SiteEmailLists.NewStaffList.Count == 0)
             { }
             else
@@ -590,12 +594,12 @@ namespace PostTestsService
                 sbBody.Append("<h3>The following expired staff members have not completed their annual post tests.</h3>");
 
                 sbBody.Append("<table style='border-collapse:collapse;' cellpadding='5' border='1'><tr style='background-color:87CEEB'><th>Name</th><th>Role</th><th>Due Date</th><th>Email</th></tr>");
-                
+
                 foreach (var ptnd in expiredSortedList)
                 {
                     //Logger.Info("in foreach (var ptnd in expiredSortedList)");
                     Debug.Assert(ptnd.NextDueDate != null, "ptnd.NextDueDate != null");
-                    if(ptnd.NextDueDate !=null)
+                    if (ptnd.NextDueDate != null)
                         sbBody.Append("<tr><td>" + ptnd.Name + "</td><td>" + ptnd.Role + "</td><td>" + ptnd.NextDueDate.Value.ToShortDateString() + "</td><td>" + ptnd.Email +
                                   "</td></tr>");
                 }
@@ -652,7 +656,7 @@ namespace PostTestsService
                 sbBody.Append("</table></div>");
                 //Logger.Info("after si.SiteEmailLists.StaffTestsNotCompletedList.Count");
             }
-            
+
             SendHtmlEmail("Post Tests Notifications - " + si.Name, coordinators.ToArray(), null, sbBody.ToString(), path, @"<a href='http://halfpintstudy.org/hpProd/'>Halfpint Study Website</a>");
         }
 
@@ -697,21 +701,22 @@ namespace PostTestsService
             av.LinkedResources.Add(mailLogo);
             mm.AlternateViews.Add(av);
 
-            foreach (string s in toAddress)
-                mm.To.Add(s);
-            if (ccAddress != null)
-            {
-                foreach (string s in ccAddress)
-                    mm.CC.Add(s);
-            }
-
-            Console.WriteLine("Send Email");
-            Console.WriteLine("Subject:" + subject);
-            Console.Write("To:" + toAddress[0]);
-            //Console.Write("Email:" + sb);
-
             try
             {
+                foreach (string s in toAddress)
+                    mm.To.Add(s);
+                if (ccAddress != null)
+                {
+                    foreach (string s in ccAddress)
+                        mm.CC.Add(s);
+                }
+
+                Console.WriteLine("Send Email");
+                Console.WriteLine("Subject:" + subject);
+                Console.Write("To:" + toAddress[0]);
+                //Console.Write("Email:" + sb);
+
+
                 var smtp = new SmtpClient();
                 smtp.Send(mm);
             }
@@ -719,7 +724,7 @@ namespace PostTestsService
             {
                 Logger.Info(ex.Message);
             }
-            
+
         }
 
         internal static List<string> GetStaffForEvent(int eventId, int siteId)
@@ -808,7 +813,7 @@ namespace PostTestsService
             }
             return memUsers;
         }
-        
+
         public static List<String> GetActiveRequiredTests(bool isSecondYear)
         {
             var list = new List<string>();
@@ -1008,7 +1013,7 @@ namespace PostTestsService
                                 //this works because the completed tests are in dateCompleted order 
                                 if (ptnd.NextDueDate == null)
                                     ptnd.NextDueDate = postTest.DateCompleted.Value.AddYears(1);
-                                
+
                                 var tsDayWindow = nextDueDate - DateTime.Now;
                                 if (tsDayWindow.Days <= 30)
                                 {
@@ -1101,8 +1106,8 @@ namespace PostTestsService
             if (!Directory.Exists(path))
                 Directory.CreateDirectory(path);
 
-            var fileName = siteName + " " + DateTime.Now.ToString("MM-dd-yyyy")  + " " + ConfigurationManager.AppSettings["StatStripListName"]; 
-            
+            var fileName = siteName + " " + DateTime.Now.ToString("MM-dd-yyyy") + " " + ConfigurationManager.AppSettings["StatStripListName"];
+
 
             var fullpath = Path.Combine(path, fileName);
 
@@ -1118,7 +1123,7 @@ namespace PostTestsService
                 sw.Write(line.Col3 + ",");
                 sw.Write(line.Col4 + ",");
                 sw.Write(line.Col5 + ",");
-                if(siteCode == "20")
+                if (siteCode == "20")
                     sw.Write("U" + line.EmployeeId + ",");
                 else
                     sw.Write(line.EmployeeId + ",");
