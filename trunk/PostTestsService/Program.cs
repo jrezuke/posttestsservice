@@ -139,6 +139,7 @@ namespace PostTestsService
                             break;
                         case "15":
                         case "21":
+                        case "35":
                             if (postTestNextDue.Role != "Nurse")
                             {
                                 //make sure they are nova net certified
@@ -510,6 +511,7 @@ namespace PostTestsService
                             break;
                         case "15":
                         case "21":
+                        case "35":
                             if (!ptnd.IsNovaStatStripTested)
                                 test = "NovaStatStrip ";
                             break;
@@ -1053,7 +1055,7 @@ namespace PostTestsService
                             ptnd.TestsNotCompleted.Remove("NovaStatStrip");
                         }
 
-                        if (siteCode == "21" || siteCode == "15")
+                        if (siteCode == "21" || siteCode == "15" || siteCode ==  "35")
                         {
                             ptnd.TestsNotCompleted.Remove("VampJr");
                         }
