@@ -68,8 +68,8 @@ namespace PostTestsService
             //iterate sites
             foreach (var si in sites.Where(si => si.EmpIdRequired))
             {
-                if (si.Id != 2)
-                    continue;
+                //if (si.Id != 2)
+                //    continue;
 
 
                 Console.WriteLine(si.Name);
@@ -336,8 +336,8 @@ namespace PostTestsService
             foreach (var si in sites)
             {
                 //done to do - comment this for prod
-                if (si.Id != 2)
-                    continue;
+                //if (si.Id != 2)
+                //    continue;
 
                 //skip for sites not needed
                 if (!si.EmpIdRequired)
@@ -393,8 +393,8 @@ namespace PostTestsService
                 foreach (var si in sites)
                 {
                     //done to do - comment this for prod
-                    if (si.Id != 2)
-                        continue;
+                    //if (si.Id != 2)
+                    //    continue;
 
                     //skip for sites not needed
                     if (!si.EmpIdRequired)
