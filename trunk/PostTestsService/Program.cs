@@ -597,13 +597,21 @@ namespace PostTestsService
 
                 sbBody.Append("<table style='border-collapse:collapse;' cellpadding='5' border='1'><tr style='background-color:87CEEB'><th>Name</th><th>Role</th><th>Due Date</th><th>Email</th></tr>");
 
-                foreach (var ptnd in expiredSortedList)
+                try
                 {
-                    //Logger.Info("in foreach (var ptnd in expiredSortedList)");
-                    Debug.Assert(ptnd.NextDueDate != null, "ptnd.NextDueDate != null");
-                    if (ptnd.NextDueDate != null)
-                        sbBody.Append("<tr><td>" + ptnd.Name + "</td><td>" + ptnd.Role + "</td><td>" + ptnd.NextDueDate.Value.ToShortDateString() + "</td><td>" + ptnd.Email +
-                                  "</td></tr>");
+                    foreach (var ptnd in expiredSortedList)
+                    {
+                        //Logger.Info("in foreach (var ptnd in expiredSortedList)");
+                        //Debug.Assert(ptnd.NextDueDate != null, "ptnd.NextDueDate != null");
+                        if (ptnd.NextDueDate != null)
+                            sbBody.Append("<tr><td>" + ptnd.Name + "</td><td>" + ptnd.Role + "</td><td>" +
+                                          ptnd.NextDueDate.Value.ToShortDateString() + "</td><td>" + ptnd.Email +
+                                          "</td></tr>");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.Write(ex.Message);
                 }
                 //Logger.Info("after foreach (var ptnd in expiredSortedList)");
                 sbBody.Append("</table>");
@@ -1003,11 +1011,11 @@ namespace PostTestsService
                                 #region tempDateCompleted
 
                                 var dateCompleted = postTest.DateCompleted.GetValueOrDefault();
-                                if (dateCompleted.CompareTo(DateTime.Parse("05/01/2012")) < 0)
-                                {
-                                    postTest.DateCompleted = DateTime.Parse("05/01/12");
-                                    dateCompleted = DateTime.Parse("05/01/2012");
-                                }
+                                //if (dateCompleted.CompareTo(DateTime.Parse("05/01/2012")) < 0)
+                                //{
+                                //    postTest.DateCompleted = DateTime.Parse("05/01/12");
+                                //    dateCompleted = DateTime.Parse("05/01/2012");
+                                //}
                                 var nextDueDate = dateCompleted.AddYears(1);
 
                                 #endregion tempDateCompleted
