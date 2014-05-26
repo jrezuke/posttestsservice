@@ -4,7 +4,6 @@ using System.Data.SqlClient;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Security.Policy;
 using System.Text;
 using NLog;
 using System.Configuration;
@@ -198,13 +197,13 @@ namespace PostTestsService
                     string subject;
                     string body;
                     string[] to;
-                    var bTempIncludOnList = false;
+                    //var bTempIncludOnList = false;
 
                     //see if all required post tests are completed
                     if (postTestNextDue.TestsNotCompleted.Count > 0)
                     {
-                        if (!bTempIncludOnList)
-                        {
+                        //if (!bTempIncludOnList)
+                        //{
                             if (postTestNextDue.IsNew)
                             {
                                 si.SiteEmailLists.NewStaffList.Add(postTestNextDue);
@@ -259,9 +258,9 @@ namespace PostTestsService
                                     }
                                 }
                             }
-                        }
-                        if (!bTempIncludOnList)
-                            continue;
+                        //}
+                        //if (!bTempIncludOnList)
+                        //    continue;
                     }//if (postTestNextDue.TestsNotCompleted.Count > 0)
 
                     //else all tests are completed
@@ -407,34 +406,33 @@ namespace PostTestsService
             //Console.Read();
         }
 
-        private static void DoTest(int ii)
-        {
-            var i = ii.ToString();
-            switch (i)
-            {
-                case "01":
-                case "02":
-                case "09":
-                case "13":
-                case "31":
-                    Console.WriteLine("****9 or 13 or 31");
-                    break;
-                case "14":
-                    Console.WriteLine("****14");
-                    break;
-                case "15":
-                case "21":
-                    Console.WriteLine("****15");
-                    break;
-                case "20":
-                    break;
-                    break;
-                default:
-                    Console.WriteLine("default");
-                    break;
-            }
+        //private static void DoTest(int ii)
+        //{
+        //    var i = ii.ToString();
+        //    switch (i)
+        //    {
+        //        case "01":
+        //        case "02":
+        //        case "09":
+        //        case "13":
+        //        case "31":
+        //            Console.WriteLine("****9 or 13 or 31");
+        //            break;
+        //        case "14":
+        //            Console.WriteLine("****14");
+        //            break;
+        //        case "15":
+        //        case "21":
+        //            Console.WriteLine("****15");
+        //            break;
+        //        case "20":
+        //            break;
+        //        default:
+        //            Console.WriteLine("default");
+        //            break;
+        //    }
 
-        }
+        //}
 
         private static void DeleteOldOperatorsLists(string siteCode)
         {
@@ -629,8 +627,9 @@ namespace PostTestsService
                 foreach (var ptnd in dueSortedList)
                 {
                     Debug.Assert(ptnd.NextDueDate != null, "ptnd.NextDueDate != null");
-                    sbBody.Append("<tr><td>" + ptnd.Name + "</td><td>" + ptnd.Role + "</td><td>" + ptnd.NextDueDate.Value.ToShortDateString() + "</td><td>" + ptnd.Email +
-                                  "</td></tr>");
+                    if (ptnd.NextDueDate != null)
+                        sbBody.Append("<tr><td>" + ptnd.Name + "</td><td>" + ptnd.Role + "</td><td>" + ptnd.NextDueDate.Value.ToShortDateString() + "</td><td>" + ptnd.Email +
+                                      "</td></tr>");
                 }
                 sbBody.Append("</table>");
             }
@@ -755,11 +754,10 @@ namespace PostTestsService
 
                 conn.Open();
                 SqlDataReader rdr = cmd.ExecuteReader();
-                int pos = 0;
 
                 while (rdr.Read())
                 {
-                    pos = rdr.GetOrdinal("AllSites");
+                    int pos = rdr.GetOrdinal("AllSites");
                     var isAllSites = rdr.GetBoolean(pos);
 
                     pos = rdr.GetOrdinal("Email");
@@ -791,22 +789,22 @@ namespace PostTestsService
         {
             var memUsers = new List<MembershipUser>();
             string[] users = Roles.GetUsersInRole(role);
-
+            SqlDataReader rdr = null;
             String strConn = ConfigurationManager.ConnectionStrings["Halfpint"].ToString();
             using (var conn = new SqlConnection(strConn))
             {
                 try
                 {
                     var cmd = new SqlCommand("", conn)
-                                  {
-                                      CommandType = System.Data.CommandType.StoredProcedure,
-                                      CommandText = "GetSiteUsers"
-                                  };
+                              {
+                                  CommandType = CommandType.StoredProcedure,
+                                  CommandText = "GetSiteUsers"
+                              };
                     var param = new SqlParameter("@siteID", site);
                     cmd.Parameters.Add(param);
 
                     conn.Open();
-                    var rdr = cmd.ExecuteReader();
+                    rdr = cmd.ExecuteReader();
 
                     while (rdr.Read())
                     {
@@ -820,6 +818,11 @@ namespace PostTestsService
                 {
                     Logger.Error(ex);
                 }
+                finally
+                {
+                    if(rdr != null)
+                        rdr.Close();
+                }
             }
             return memUsers;
         }
@@ -828,19 +831,19 @@ namespace PostTestsService
         {
             var list = new List<string>();
             var strConn = ConfigurationManager.ConnectionStrings["Halfpint"].ToString();
-
+            SqlDataReader rdr = null;
             using (var conn = new SqlConnection(strConn))
             {
                 try
                 {
                     var cmd = new SqlCommand("", conn)
                                   {
-                                      CommandType = System.Data.CommandType.Text,
+                                      CommandType = CommandType.Text,
                                       CommandText = "SELECT Name FROM PostTests WHERE Active=1 AND Required=1"
                                   };
 
                     conn.Open();
-                    var rdr = cmd.ExecuteReader();
+                    rdr = cmd.ExecuteReader();
                     while (rdr.Read())
                     {
                         var name = rdr.GetString(0);
@@ -859,6 +862,11 @@ namespace PostTestsService
                 {
                     Logger.Error(ex);
                 }
+                finally
+                {
+                    if (rdr != null)
+                        rdr.Close();
+                }
             }
 
             return list;
@@ -869,15 +877,15 @@ namespace PostTestsService
             var sil = new List<SiteInfo>();
 
             String strConn = ConfigurationManager.ConnectionStrings["Halfpint"].ToString();
-
+            SqlDataReader rdr = null;
             using (var conn = new SqlConnection(strConn))
             {
                 try
                 {
-                    var cmd = new SqlCommand("", conn) { CommandType = System.Data.CommandType.StoredProcedure, CommandText = "GetSitesActive" };
+                    var cmd = new SqlCommand("", conn) { CommandType = CommandType.StoredProcedure, CommandText = "GetSitesActive" };
 
                     conn.Open();
-                    var rdr = cmd.ExecuteReader();
+                    rdr = cmd.ExecuteReader();
                     while (rdr.Read())
                     {
                         var si = new SiteInfo();
@@ -897,6 +905,11 @@ namespace PostTestsService
                 {
                     Logger.Error(ex);
                 }
+                finally
+                {
+                    if (rdr != null)
+                        rdr.Close();
+                }
             }
             return sil;
         }
@@ -904,7 +917,7 @@ namespace PostTestsService
         private static List<PostTestNextDue> GetStaffPostTestsCompletedInfo(int siteId, string siteCode)
         {
             var ptndl = new List<PostTestNextDue>();
-
+            SqlDataReader rdr = null;
             var strConn = ConfigurationManager.ConnectionStrings["Halfpint"].ToString();
             using (var conn = new SqlConnection(strConn))
             {
@@ -912,14 +925,14 @@ namespace PostTestsService
                 {
                     var cmd = new SqlCommand("", conn)
                                   {
-                                      CommandType = System.Data.CommandType.StoredProcedure,
+                                      CommandType = CommandType.StoredProcedure,
                                       CommandText = "GetStaffActiveInfoForSite"
                                   };
                     var param = new SqlParameter("@siteId", siteId);
                     cmd.Parameters.Add(param);
 
                     conn.Open();
-                    var rdr = cmd.ExecuteReader();
+                    rdr = cmd.ExecuteReader();
                     while (rdr.Read())
                     {
                         var pos = rdr.GetOrdinal("Role");
@@ -978,7 +991,7 @@ namespace PostTestsService
                     {
                         cmd = new SqlCommand("", conn)
                         {
-                            CommandType = System.Data.CommandType.StoredProcedure,
+                            CommandType = CommandType.StoredProcedure,
                             CommandText = "GetPostTestsCompletedForStaffMember"
                         };
                         param = new SqlParameter("@staffId", ptnd.Id);
@@ -1079,7 +1092,7 @@ namespace PostTestsService
                         {
                             cmd = new SqlCommand("", conn)
                             {
-                                CommandType = System.Data.CommandType.StoredProcedure,
+                                CommandType = CommandType.StoredProcedure,
                                 CommandText = "IsStaffMemberPostTestsNew"
                             };
                             param = new SqlParameter("@staffId", ptnd.Id);
@@ -1102,6 +1115,11 @@ namespace PostTestsService
                 {
                     Logger.Error(ex);
                     return null;
+                }
+                finally
+                {
+                    if (rdr != null)
+                        rdr.Close();
                 }
             }
 
@@ -1293,15 +1311,17 @@ namespace PostTestsService
                 foreach (var postTest in testsCompleted)
                 {
                     Debug.Assert(postTest.DateCompleted != null, "postTest.DateCompleted != null");
-                    var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
-                    var tsDayWindow = nextDueDate - DateTime.Now;
-                    if (tsDayWindow.Days <= 30)
-                        sb.Append("<tr><td>" + postTest.Name + "</td><td><strong>" + nextDueDate.ToShortDateString() +
-                                  "</strong></td></tr>");
-                    else
-                        sb.Append("<tr><td>" + postTest.Name + "</td><td>" + nextDueDate.ToShortDateString() +
-                                  "</td></tr>");
-
+                    if (postTest.DateCompleted != null)
+                    {
+                        var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
+                        var tsDayWindow = nextDueDate - DateTime.Now;
+                        if (tsDayWindow.Days <= 30)
+                            sb.Append("<tr><td>" + postTest.Name + "</td><td><strong>" + nextDueDate.ToShortDateString() +
+                                      "</strong></td></tr>");
+                        else
+                            sb.Append("<tr><td>" + postTest.Name + "</td><td>" + nextDueDate.ToShortDateString() +
+                                      "</td></tr>");
+                    }
                 }
                 sb.Append("</table>");
             }
@@ -1340,15 +1360,17 @@ namespace PostTestsService
                 foreach (var postTest in testsCompleted)
                 {
                     Debug.Assert(postTest.DateCompleted != null, "postTest.DateCompleted != null");
-                    var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
-                    var tsDayWindow = nextDueDate - DateTime.Now;
-                    if (tsDayWindow.Days <= 30)
-                        sb.Append("<tr><td>" + postTest.Name + "</td><td><strong>" + nextDueDate.ToShortDateString() +
-                                  "</strong></td></tr>");
-                    else
-                        sb.Append("<tr><td>" + postTest.Name + "</td><td>" + nextDueDate.ToShortDateString() +
-                                  "</td></tr>");
-
+                    if (postTest.DateCompleted != null)
+                    {
+                        var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
+                        var tsDayWindow = nextDueDate - DateTime.Now;
+                        if (tsDayWindow.Days <= 30)
+                            sb.Append("<tr><td>" + postTest.Name + "</td><td><strong>" + nextDueDate.ToShortDateString() +
+                                      "</strong></td></tr>");
+                        else
+                            sb.Append("<tr><td>" + postTest.Name + "</td><td>" + nextDueDate.ToShortDateString() +
+                                      "</td></tr>");
+                    }
                 }
                 sb.Append("</table>");
             }
@@ -1387,15 +1409,17 @@ namespace PostTestsService
                 foreach (var postTest in testsCompleted)
                 {
                     Debug.Assert(postTest.DateCompleted != null, "postTest.DateCompleted != null");
-                    var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
-                    var tsDayWindow = nextDueDate - DateTime.Now;
-                    if (tsDayWindow.Days <= 30)
-                        sb.Append("<tr><td>" + postTest.Name + "</td><td><strong>" + nextDueDate.ToShortDateString() +
-                                  "</strong></td></tr>");
-                    else
-                        sb.Append("<tr><td>" + postTest.Name + "</td><td>" + nextDueDate.ToShortDateString() +
-                                  "</td></tr>");
-
+                    if (postTest.DateCompleted != null)
+                    {
+                        var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
+                        var tsDayWindow = nextDueDate - DateTime.Now;
+                        if (tsDayWindow.Days <= 30)
+                            sb.Append("<tr><td>" + postTest.Name + "</td><td><strong>" + nextDueDate.ToShortDateString() +
+                                      "</strong></td></tr>");
+                        else
+                            sb.Append("<tr><td>" + postTest.Name + "</td><td>" + nextDueDate.ToShortDateString() +
+                                      "</td></tr>");
+                    }
                 }
                 sb.Append("</table>");
             }
