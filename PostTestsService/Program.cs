@@ -224,7 +224,7 @@ namespace PostTestsService
                                 }
                                 else
                                 {
-                                    if (DateTime.Today.DayOfWeek == DayOfWeek.Tuesday)
+                                    if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
                                     {
                                         if (_bSendEmails)
                                             SendHtmlEmail(subject, to, null, body, path,
@@ -250,7 +250,7 @@ namespace PostTestsService
                                 }
                                 else
                                 {
-                                    if (DateTime.Today.DayOfWeek == DayOfWeek.Tuesday)
+                                    if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
                                     {
                                         if (_bSendEmails)
                                             SendHtmlEmail(subject, to, null, body, path,
@@ -286,7 +286,7 @@ namespace PostTestsService
                             }
                             else
                             {
-                                if (DateTime.Today.DayOfWeek == DayOfWeek.Tuesday)
+                                if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
                                 {
                                     if (_bSendEmails)
                                         SendHtmlEmail(subject, to, null, body, path,
@@ -313,7 +313,7 @@ namespace PostTestsService
                             }
                             else
                             {
-                                if (DateTime.Today.DayOfWeek == DayOfWeek.Tuesday)
+                                if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
                                 {
                                     if (_bSendEmails)
                                         SendHtmlEmail(subject, to, null, body, path,
@@ -370,7 +370,10 @@ namespace PostTestsService
                     var startDate = DateTime.Now.AddMonths(-12);
 
                     nnc.StartDate = startDate.ToString("M/d/yyyy");
-                    nnc.EndDate = ptnd.NextDueDate.Value.ToString("M/d/yyyy");
+                    if (ptnd.NextDueDate == null)
+                        nnc.EndDate = "";
+                    else
+                        nnc.EndDate = ptnd.NextDueDate.Value.ToString("M/d/yyyy");
                     lines.Add(nnc);
 
                     Console.WriteLine(ptnd.Name + ":" + ptnd.SNextDueDate + ", email: " + ptnd.Email + ", Employee ID: " + ptnd.EmployeeId);
@@ -958,7 +961,7 @@ namespace PostTestsService
 
                         pos = rdr.GetOrdinal("ID");
                         ptnd.Id = rdr.GetInt32(pos);
-
+                        
                         pos = rdr.GetOrdinal("Name");
                         ptnd.Name = rdr.GetString(pos);
 
@@ -999,7 +1002,7 @@ namespace PostTestsService
 
                         conn.Open();
                         rdr = cmd.ExecuteReader();
-
+                        
                         while (rdr.Read())
                         {
                             var postTest = new PostTest();
@@ -1056,6 +1059,8 @@ namespace PostTestsService
                                 }
                             }
 
+                            if (ptnd.NextDueDate == null)
+                                ptnd.NextDueDate = DateTime.Now.AddYears(1);
                             //remove this from the tests not completed list
                             ptnd.TestsNotCompleted.Remove(postTest.Name);
                             //add to the tests completed
