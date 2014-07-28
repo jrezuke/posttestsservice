@@ -135,6 +135,7 @@ namespace PostTestsService
                             break;
                         case "14":
                         case "20":
+                        case "27":
                             break;
                         case "15":
                         case "21":
@@ -509,6 +510,7 @@ namespace PostTestsService
                             break;
                         case "14":
                         case "20":
+                        case "27":
                             break;
                         case "15":
                         case "21":
@@ -1070,7 +1072,7 @@ namespace PostTestsService
                         conn.Close();
 
                         //remove for exceptions
-                        if (siteCode == "14" || siteCode == "20")
+                        if (siteCode == "14" || siteCode == "20" || siteCode == "27")
                         {
                             ptnd.TestsNotCompleted.Remove("NovaStatStrip");
                             ptnd.TestsNotCompleted.Remove("VampJr");
