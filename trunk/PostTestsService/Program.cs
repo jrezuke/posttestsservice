@@ -100,7 +100,7 @@ namespace PostTestsService
                 //iterate people                
                 foreach (var postTestNextDue in si.PostTestNextDues)
                 {
-                    //creat the StaffTestsNotCompletedList email list to coordinators
+                    //create the StaffTestsNotCompletedList email list to coordinators
                     var stnc = new StaffTestsNotCompletedList
                                    {
                                        StaffId = postTestNextDue.Id,
@@ -140,20 +140,20 @@ namespace PostTestsService
                         case "15":
                         case "21":
                         case "33":
-                            if (postTestNextDue.Role != "Nurse")
+                            //make sure they are nova net certified
+                            if (!postTestNextDue.IsNovaStatStripTested)
                             {
-                                //make sure they are nova net certified
-                                if (!postTestNextDue.IsNovaStatStripTested)
-                                {
-                                    //Logger.Info("NovaStatStrip competency needed for " + postTestNextDue.Name);
-                                    si.SiteEmailLists.CompetencyMissingList.Add(postTestNextDue);
-                                    bContinue = true;
-                                }
+                                //Logger.Info("NovaStatStrip competency needed for " + postTestNextDue.Name);
+                                si.SiteEmailLists.CompetencyMissingList.Add(postTestNextDue);
+                                bContinue = true;
                             }
                             break;
                         default:
+                            //only nurses have to take both competencies
+                            //all other roles only have to take NovaStatStrip
                             if (postTestNextDue.Role != "Nurse")
                             {
+
                                 //make sure they are nova net certified
                                 if (!postTestNextDue.IsNovaStatStripTested)
                                 {
