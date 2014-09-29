@@ -122,7 +122,7 @@ namespace PostTestsService
                         case "09":
                         case "13":
                         case "31":
-                            //make sure they are vamp certified
+                            //make sure they are vamp certified - nova not required
                             if (postTestNextDue.Role == "Nurse")
                             {
                                 if (!postTestNextDue.IsVampTested)
@@ -133,6 +133,7 @@ namespace PostTestsService
                                 }
                             }
                             break;
+                            //don't bother with both vamp jr and novanet
                         case "14":
                         case "20":
                         case "27":
@@ -140,7 +141,7 @@ namespace PostTestsService
                         case "15":
                         case "21":
                         case "33":
-                            //make sure they are nova net certified
+                            //make sure they are nova net certified - vamp not required
                             if (!postTestNextDue.IsNovaStatStripTested)
                             {
                                 //Logger.Info("NovaStatStrip competency needed for " + postTestNextDue.Name);
