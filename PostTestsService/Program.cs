@@ -139,6 +139,7 @@ namespace PostTestsService
                         case "27":
                             break;
                         case "15":
+                        case "18":
                         case "21":
                         case "33":
                             //make sure they are nova net certified - vamp not required
@@ -514,6 +515,7 @@ namespace PostTestsService
                         case "27":
                             break;
                         case "15":
+                        case "18":
                         case "21":
                         case "33":
                             if (!ptnd.IsNovaStatStripTested)
@@ -1084,7 +1086,7 @@ namespace PostTestsService
                             ptnd.TestsNotCompleted.Remove("NovaStatStrip");
                         }
 
-                        if (siteCode == "21" || siteCode == "15" || siteCode ==  "33")
+                        if (siteCode == "21" || siteCode == "15" || siteCode == "18" || siteCode == "33")
                         {
                             ptnd.TestsNotCompleted.Remove("VampJr");
                         }
