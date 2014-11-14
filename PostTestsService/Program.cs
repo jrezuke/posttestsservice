@@ -133,7 +133,7 @@ namespace PostTestsService
                                 }
                             }
                             break;
-                            //don't bother with both vamp jr and novanet
+                        //don't bother with both vamp jr and novanet
                         case "14":
                         case "20":
                         case "27":
@@ -202,68 +202,67 @@ namespace PostTestsService
                     string[] to;
                     //var bTempIncludOnList = false;
 
-                    //see if all required post tests are completed
+                    //see if all required post tests are completed -
+                    //send emails
+                    if (si.Id == 24 && postTestNextDue.Role == "Nurse")
+                        continue;
                     if (postTestNextDue.TestsNotCompleted.Count > 0)
                     {
-                        //if (!bTempIncludOnList)
-                        //{
-                            if (postTestNextDue.IsNew)
+                        if (postTestNextDue.IsNew)
+                        {
+                            si.SiteEmailLists.NewStaffList.Add(postTestNextDue);
+                            //send new user email
+                            body = EmailBodies.PostTestsDueNewStaff(postTestNextDue.TestsNotCompleted,
+                                                                    postTestNextDue.TestsCompleted);
+                            to = new[] { postTestNextDue.Email };
+
+                            subject =
+                                string.Format(
+                                    "Please Read: Please Complete the Online HALF-PINT Post-Tests - site:{0}",
+                                    si.Name);
+
+                            if (_bForceEmails)
                             {
-                                si.SiteEmailLists.NewStaffList.Add(postTestNextDue);
-                                //send new user email
-                                body = EmailBodies.PostTestsDueNewStaff(postTestNextDue.TestsNotCompleted,
-                                                                        postTestNextDue.TestsCompleted);
-                                to = new[] { postTestNextDue.Email };
-
-                                subject =
-                                    string.Format(
-                                        "Please Read: Please Complete the Online HALF-PINT Post-Tests - site:{0}",
-                                        si.Name);
-
-                                if (_bForceEmails)
-                                {
-                                    SendHtmlEmail(subject, to, null, body, path,
-                                                  @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
-                                }
-                                else
-                                {
-                                    if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
-                                    {
-                                        if (_bSendEmails)
-                                            SendHtmlEmail(subject, to, null, body, path,
-                                                          @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
-                                    }
-                                }
+                                SendHtmlEmail(subject, to, null, body, path,
+                                              @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
                             }
                             else
                             {
-                                si.SiteEmailLists.ExpiredList.Add(postTestNextDue);
-                                //send new user email
-                                body = EmailBodies.PostTestsExpiredStaff(postTestNextDue.TestsNotCompleted,
-                                                                         postTestNextDue.TestsCompleted);
-                                to = new[] { postTestNextDue.Email };
-
-                                subject = "Please Read: Your HALF-PINT Training Has Expired - site:" + si.Name;
-
-                                if (_bForceEmails)
+                                if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
                                 {
                                     if (_bSendEmails)
                                         SendHtmlEmail(subject, to, null, body, path,
                                                       @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
                                 }
-                                else
+                            }
+                        }
+                        else
+                        {
+                            si.SiteEmailLists.ExpiredList.Add(postTestNextDue);
+                            //send new user email
+                            body = EmailBodies.PostTestsExpiredStaff(postTestNextDue.TestsNotCompleted,
+                                                                     postTestNextDue.TestsCompleted);
+                            to = new[] { postTestNextDue.Email };
+
+                            subject = "Please Read: Your HALF-PINT Training Has Expired - site:" + si.Name;
+
+                            if (_bForceEmails)
+                            {
+                                if (_bSendEmails)
+                                    SendHtmlEmail(subject, to, null, body, path,
+                                                  @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                            }
+                            else
+                            {
+                                if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
                                 {
-                                    if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
-                                    {
-                                        if (_bSendEmails)
-                                            SendHtmlEmail(subject, to, null, body, path,
-                                                          @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
-                                    }
+                                    if (_bSendEmails)
+                                        SendHtmlEmail(subject, to, null, body, path,
+                                                      @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
                                 }
                             }
-                        //}
-                        //if (!bTempIncludOnList)
-                        //    continue;
+                        }
+
                     }//if (postTestNextDue.TestsNotCompleted.Count > 0)
 
                     //else all tests are completed
@@ -828,7 +827,7 @@ namespace PostTestsService
                 }
                 finally
                 {
-                    if(rdr != null)
+                    if (rdr != null)
                         rdr.Close();
                 }
             }
@@ -966,7 +965,7 @@ namespace PostTestsService
 
                         pos = rdr.GetOrdinal("ID");
                         ptnd.Id = rdr.GetInt32(pos);
-                        
+
                         pos = rdr.GetOrdinal("Name");
                         ptnd.Name = rdr.GetString(pos);
 
@@ -1007,7 +1006,7 @@ namespace PostTestsService
 
                         conn.Open();
                         rdr = cmd.ExecuteReader();
-                        
+
                         while (rdr.Read())
                         {
                             var postTest = new PostTest();
