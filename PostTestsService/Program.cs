@@ -59,6 +59,9 @@ namespace PostTestsService
                 Logger.Info("Argument:" + args[0]);
             }
 
+            //todo - comment this
+            //_bForceEmails = true;
+            
             var path = AppDomain.CurrentDomain.BaseDirectory;
 
             //get sites 
@@ -67,7 +70,8 @@ namespace PostTestsService
             //iterate sites
             foreach (var si in sites.Where(si => si.EmpIdRequired))
             {
-                //if (si.Id != 2)
+                //todo - comment this
+                //if (si.Id != 1)
                 //    continue;
 
 
@@ -336,8 +340,8 @@ namespace PostTestsService
             //iterate sites
             foreach (var si in sites)
             {
-                //done to do - comment this for prod
-                //if (si.Id != 2)
+                //todo - comment this for prod
+                //if (si.Id != 1)
                 //    continue;
 
                 //skip for sites not needed
@@ -351,34 +355,38 @@ namespace PostTestsService
                 var lines = new List<NovaNetColumns>();
 
                 //iterate people
-                foreach (var ptnd in si.PostTestNextDues)
+                if (si.PostTestNextDues != null)
                 {
-                    if (!ptnd.IsOkForList)
-                        continue;
+                    foreach (var ptnd in si.PostTestNextDues)
+                    {
+                        if (!ptnd.IsOkForList)
+                            continue;
 
-                    var nnc = new NovaNetColumns();
-                    var sep = new[] { ',' };
-                    var names = ptnd.Name.Split(sep);
-                    nnc.LastName = names[0];
-                    nnc.FirstName = names[1];
-                    nnc.Col3 = "ALL";
-                    nnc.Col4 = "ALL";
-                    nnc.Col5 = "StatStrip";
-                    nnc.EmployeeId = ptnd.EmployeeId;
-                    nnc.Col7 = "T";
-                    nnc.Col8 = "O";
-                    nnc.Col9 = "Glucose";
+                        var nnc = new NovaNetColumns();
+                        var sep = new[] {','};
+                        var names = ptnd.Name.Split(sep);
+                        nnc.LastName = names[0];
+                        nnc.FirstName = names[1];
+                        nnc.Col3 = "ALL";
+                        nnc.Col4 = "ALL";
+                        nnc.Col5 = "StatStrip";
+                        nnc.EmployeeId = ptnd.EmployeeId;
+                        nnc.Col7 = "T";
+                        nnc.Col8 = "O";
+                        nnc.Col9 = "Glucose";
 
-                    var startDate = DateTime.Now.AddMonths(-12);
+                        var startDate = DateTime.Now.AddMonths(-12);
 
-                    nnc.StartDate = startDate.ToString("M/d/yyyy");
-                    if (ptnd.NextDueDate == null)
-                        nnc.EndDate = "";
-                    else
-                        nnc.EndDate = ptnd.NextDueDate.Value.ToString("M/d/yyyy");
-                    lines.Add(nnc);
+                        nnc.StartDate = startDate.ToString("M/d/yyyy");
+                        if (ptnd.NextDueDate == null)
+                            nnc.EndDate = "";
+                        else
+                            nnc.EndDate = ptnd.NextDueDate.Value.ToString("M/d/yyyy");
+                        lines.Add(nnc);
 
-                    Console.WriteLine(ptnd.Name + ":" + ptnd.SNextDueDate + ", email: " + ptnd.Email + ", Employee ID: " + ptnd.EmployeeId);
+                        Console.WriteLine(ptnd.Name + ":" + ptnd.SNextDueDate + ", email: " + ptnd.Email +
+                                          ", Employee ID: " + ptnd.EmployeeId);
+                    }
                 }
 
                 //write lines to new file
@@ -396,8 +404,8 @@ namespace PostTestsService
             {
                 foreach (var si in sites)
                 {
-                    //done to do - comment this for prod
-                    //if (si.Id != 2)
+                    //todo - comment this for prod
+                    //if (si.Id != 1)
                     //    continue;
 
                     //skip for sites not needed
@@ -965,6 +973,10 @@ namespace PostTestsService
 
                         pos = rdr.GetOrdinal("ID");
                         ptnd.Id = rdr.GetInt32(pos);
+                        //todo - comment this
+                        //if (ptnd.Id != 3)
+                        //    continue;
+                        
 
                         pos = rdr.GetOrdinal("Name");
                         ptnd.Name = rdr.GetString(pos);
@@ -1191,6 +1203,11 @@ namespace PostTestsService
 
     public class SiteInfo
     {
+        public SiteInfo()
+        {
+            PostTestNextDues = new List<PostTestNextDue>();   
+            SiteEmailLists = new SiteEmailLists();
+        }
         public int Id { get; set; }
         public string SiteId { get; set; }
         public string Name { get; set; }
@@ -1260,6 +1277,10 @@ namespace PostTestsService
 
     public class SitePostTestDueList
     {
+        public SitePostTestDueList()
+        {
+            PostTestNextDueList = new List<PostTestNextDue>();
+        }
         public int SiteId { get; set; }
         public List<PostTestNextDue> PostTestNextDueList { get; set; }
     }
@@ -1322,14 +1343,18 @@ namespace PostTestsService
                     Debug.Assert(postTest.DateCompleted != null, "postTest.DateCompleted != null");
                     if (postTest.DateCompleted != null)
                     {
-                        var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
-                        var tsDayWindow = nextDueDate - DateTime.Now;
-                        if (tsDayWindow.Days <= 30)
-                            sb.Append("<tr><td>" + postTest.Name + "</td><td><strong>" + nextDueDate.ToShortDateString() +
-                                      "</strong></td></tr>");
-                        else
-                            sb.Append("<tr><td>" + postTest.Name + "</td><td>" + nextDueDate.ToShortDateString() +
-                                      "</td></tr>");
+                        if (postTest.Name != "Overview")
+                        {
+                            var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
+                            var tsDayWindow = nextDueDate - DateTime.Now;
+                            if (tsDayWindow.Days <= 30)
+                                sb.Append("<tr><td>" + postTest.Name + "</td><td><strong>" +
+                                          nextDueDate.ToShortDateString() +
+                                          "</strong></td></tr>");
+                            else
+                                sb.Append("<tr><td>" + postTest.Name + "</td><td>" + nextDueDate.ToShortDateString() +
+                                          "</td></tr>");
+                        }
                     }
                 }
                 sb.Append("</table>");
@@ -1371,14 +1396,18 @@ namespace PostTestsService
                     Debug.Assert(postTest.DateCompleted != null, "postTest.DateCompleted != null");
                     if (postTest.DateCompleted != null)
                     {
-                        var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
-                        var tsDayWindow = nextDueDate - DateTime.Now;
-                        if (tsDayWindow.Days <= 30)
-                            sb.Append("<tr><td>" + postTest.Name + "</td><td><strong>" + nextDueDate.ToShortDateString() +
-                                      "</strong></td></tr>");
-                        else
-                            sb.Append("<tr><td>" + postTest.Name + "</td><td>" + nextDueDate.ToShortDateString() +
-                                      "</td></tr>");
+                        if (postTest.Name != "Overview")
+                        {
+                            var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
+                            var tsDayWindow = nextDueDate - DateTime.Now;
+                            if (tsDayWindow.Days <= 30)
+                                sb.Append("<tr><td>" + postTest.Name + "</td><td><strong>" +
+                                          nextDueDate.ToShortDateString() +
+                                          "</strong></td></tr>");
+                            else
+                                sb.Append("<tr><td>" + postTest.Name + "</td><td>" + nextDueDate.ToShortDateString() +
+                                          "</td></tr>");
+                        }
                     }
                 }
                 sb.Append("</table>");
@@ -1420,14 +1449,18 @@ namespace PostTestsService
                     Debug.Assert(postTest.DateCompleted != null, "postTest.DateCompleted != null");
                     if (postTest.DateCompleted != null)
                     {
-                        var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
-                        var tsDayWindow = nextDueDate - DateTime.Now;
-                        if (tsDayWindow.Days <= 30)
-                            sb.Append("<tr><td>" + postTest.Name + "</td><td><strong>" + nextDueDate.ToShortDateString() +
-                                      "</strong></td></tr>");
-                        else
-                            sb.Append("<tr><td>" + postTest.Name + "</td><td>" + nextDueDate.ToShortDateString() +
-                                      "</td></tr>");
+                        if (postTest.Name != "Overview")
+                        {
+                            var nextDueDate = postTest.DateCompleted.Value.AddYears(1);
+                            var tsDayWindow = nextDueDate - DateTime.Now;
+                            if (tsDayWindow.Days <= 30)
+                                sb.Append("<tr><td>" + postTest.Name + "</td><td><strong>" +
+                                          nextDueDate.ToShortDateString() +
+                                          "</strong></td></tr>");
+                            else
+                                sb.Append("<tr><td>" + postTest.Name + "</td><td>" + nextDueDate.ToShortDateString() +
+                                          "</td></tr>");
+                        }
                     }
                 }
                 sb.Append("</table>");
