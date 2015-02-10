@@ -61,7 +61,7 @@ namespace PostTestsService
 
             //todo - comment this
             //_bForceEmails = true;
-            
+
             var path = AppDomain.CurrentDomain.BaseDirectory;
 
             //get sites 
@@ -269,7 +269,7 @@ namespace PostTestsService
 
                     }//if (postTestNextDue.TestsNotCompleted.Count > 0)
 
-                    //else all tests are completed
+                    else //all tests are completed
                     {
                         postTestNextDue.IsOkForList = true;
 
@@ -363,7 +363,7 @@ namespace PostTestsService
                             continue;
 
                         var nnc = new NovaNetColumns();
-                        var sep = new[] {','};
+                        var sep = new[] { ',' };
                         var names = ptnd.Name.Split(sep);
                         nnc.LastName = names[0];
                         nnc.FirstName = names[1];
@@ -976,7 +976,7 @@ namespace PostTestsService
                         //todo - comment this
                         //if (ptnd.Id != 3)
                         //    continue;
-                        
+
 
                         pos = rdr.GetOrdinal("Name");
                         ptnd.Name = rdr.GetString(pos);
@@ -1075,8 +1075,8 @@ namespace PostTestsService
                                 }
                             }
 
-                            if (ptnd.NextDueDate == null)
-                                ptnd.NextDueDate = DateTime.Now.AddYears(1);
+                            //if (ptnd.NextDueDate == null)
+                            //    ptnd.NextDueDate = DateTime.Now.AddYears(1);
                             //remove this from the tests not completed list
                             ptnd.TestsNotCompleted.Remove(postTest.Name);
                             //add to the tests completed
@@ -1097,7 +1097,7 @@ namespace PostTestsService
                             ptnd.TestsNotCompleted.Remove("NovaStatStrip");
                         }
 
-                        if (siteCode == "21" || siteCode == "15" || siteCode == "18" || siteCode == "33")
+                        if (siteCode == "15" || siteCode == "18" || siteCode == "21" || siteCode == "33")
                         {
                             ptnd.TestsNotCompleted.Remove("VampJr");
                         }
@@ -1205,7 +1205,7 @@ namespace PostTestsService
     {
         public SiteInfo()
         {
-            PostTestNextDues = new List<PostTestNextDue>();   
+            PostTestNextDues = new List<PostTestNextDue>();
             SiteEmailLists = new SiteEmailLists();
         }
         public int Id { get; set; }
