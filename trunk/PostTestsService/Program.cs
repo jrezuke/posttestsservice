@@ -17,7 +17,7 @@ namespace PostTestsService
     class Program
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-        private static bool _bSendEmails = true;
+        private static bool _bSendEmails = false;
         private static bool _bForceEmails;
 
         /// <summary>
@@ -208,8 +208,8 @@ namespace PostTestsService
 
                     //see if all required post tests are completed -
                     //send emails
-                    if (si.Id == 24 && postTestNextDue.Role == "Nurse")
-                        continue;
+                    //if (si.Id == 24 && postTestNextDue.Role == "Nurse")
+                    //    continue;
                     if (postTestNextDue.TestsNotCompleted.Count > 0)
                     {
                         if (postTestNextDue.IsNew)
@@ -227,16 +227,28 @@ namespace PostTestsService
 
                             if (_bForceEmails)
                             {
-                                SendHtmlEmail(subject, to, null, body, path,
-                                              @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                if (si.Id == 24 && postTestNextDue.Role == "Nurse")
+                                {
+                                }
+                                else
+                                {
+                                    SendHtmlEmail(subject, to, null, body, path,
+                                        @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                }
                             }
                             else
                             {
                                 if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
                                 {
                                     if (_bSendEmails)
-                                        SendHtmlEmail(subject, to, null, body, path,
-                                                      @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                        if (si.Id == 24 && postTestNextDue.Role == "Nurse")
+                                        {
+                                        }
+                                        else
+                                        {
+                                            SendHtmlEmail(subject, to, null, body, path,
+                                                @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                        }
                                 }
                             }
                         }
@@ -253,16 +265,28 @@ namespace PostTestsService
                             if (_bForceEmails)
                             {
                                 if (_bSendEmails)
-                                    SendHtmlEmail(subject, to, null, body, path,
-                                                  @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                    if (si.Id == 24 && postTestNextDue.Role == "Nurse")
+                                    {
+                                    }
+                                    else
+                                    {
+                                        SendHtmlEmail(subject, to, null, body, path,
+                                            @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                    }
                             }
                             else
                             {
                                 if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
                                 {
                                     if (_bSendEmails)
-                                        SendHtmlEmail(subject, to, null, body, path,
-                                                      @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                        if (si.Id == 24 && postTestNextDue.Role == "Nurse")
+                                        {
+                                        }
+                                        else
+                                        {
+                                            SendHtmlEmail(subject, to, null, body, path,
+                                                @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                        }
                                 }
                             }
                         }
@@ -287,16 +311,28 @@ namespace PostTestsService
                             if (_bForceEmails)
                             {
                                 if (_bSendEmails)
-                                    SendHtmlEmail(subject, to, null, body, path,
-                                                  @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                    if (si.Id == 24 && postTestNextDue.Role == "Nurse")
+                                    {
+                                    }
+                                    else
+                                    {
+                                        SendHtmlEmail(subject, to, null, body, path,
+                                            @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                    }
                             }
                             else
                             {
                                 if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
                                 {
                                     if (_bSendEmails)
-                                        SendHtmlEmail(subject, to, null, body, path,
-                                                      @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                        if (si.Id == 24 && postTestNextDue.Role == "Nurse")
+                                        {
+                                        }
+                                        else
+                                        {
+                                            SendHtmlEmail(subject, to, null, body, path,
+                                                @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                        }
                                 }
                             }
                         }
@@ -314,16 +350,28 @@ namespace PostTestsService
                             if (_bForceEmails)
                             {
                                 if (_bSendEmails)
-                                    SendHtmlEmail(subject, to, null, body, path,
-                                                  @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                    if (si.Id == 24 && postTestNextDue.Role == "Nurse")
+                                    {
+                                    }
+                                    else
+                                    {
+                                        SendHtmlEmail(subject, to, null, body, path,
+                                            @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                    }
                             }
                             else
                             {
                                 if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
                                 {
                                     if (_bSendEmails)
-                                        SendHtmlEmail(subject, to, null, body, path,
-                                                      @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                        if (si.Id == 24 && postTestNextDue.Role == "Nurse")
+                                        {
+                                        }
+                                        else
+                                        {
+                                            SendHtmlEmail(subject, to, null, body, path,
+                                                @"<a href='http://halfpintstudy.org/hpProd/PostTests/Initialize'>Halfpint Study Post Tests</a>");
+                                        }
                                 }
                             }
                         }
