@@ -17,7 +17,7 @@ namespace PostTestsService
     class Program
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-        private static bool _bSendEmails = false;
+        private static bool _bSendEmails = true;
         private static bool _bForceEmails;
 
         /// <summary>
@@ -426,10 +426,7 @@ namespace PostTestsService
                         var startDate = DateTime.Now.AddMonths(-12);
 
                         nnc.StartDate = startDate.ToString("M/d/yyyy");
-                        if (ptnd.NextDueDate == null)
-                            nnc.EndDate = "";
-                        else
-                            nnc.EndDate = ptnd.NextDueDate.Value.ToString("M/d/yyyy");
+                        nnc.EndDate = ptnd.NextDueDate == null ? "" : ptnd.NextDueDate.Value.ToString("M/d/yyyy");
                         lines.Add(nnc);
 
                         Console.WriteLine(ptnd.Name + ":" + ptnd.SNextDueDate + ", email: " + ptnd.Email +
