@@ -1,0 +1,132 @@
+#project specific
+UpgradeLog.htm
+hpMvc/ssTemplate
+hpMvc/xcel
+PrecompiledWeb
+
+#OS junk files
+[Tt]humbs.db
+*.DS_Store
+
+*.userosscache
+*.sln.docstates
+*.old
+
+#Visual Studio files
+*.[Oo]bj
+*.user
+*.aps
+*.pch
+*.pdb
+*.pgc
+*.pgd
+*.rsp
+*.vspscc
+*.vssscc
+*.meta
+*_i.c
+*_p.c
+*_i.h
+*.suo
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*.bak
+*.[Cc]ache
+*.ilk
+*.log
+*.lib
+*.ncb
+*.sbr
+*.sdf
+*.cachefile
+*.opensdf
+*.unsuccessfulbuild
+.builds
+*.svclog
+*.scc
+ipch/
+[Oo]bj/
+[Bb]in
+[Dd]ebug*/
+[Rr]elease*/
+Ankh.NoLoad
+x64/
+x86/
+
+# Visual Studo 2015 cache/options directory
+.vs/
+
+# Chutzpah Test files
+_Chutzpah*
+
+#MonoDevelop
+*.pidb
+*.userprefs
+
+#Ignore packages directory
+[pP]ackages*/
+Backup/
+
+#Allow NuGet.exe
+!NuGet.exe
+
+#Ignore generated nupkg files
+*.nupkg
+
+#Allow released nupkg files
+!VisualStudioGitIgnore.1.0.nupkg
+!VisualStudioGitIgnore.1.1.nupkg
+!VisualStudioGitIgnore.1.2.nupkg
+
+# ReSharper is a .NET coding add-in
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# SQL Server files
+*.mdf
+*.ldf
+
+#Tooling
+[Tt]est[Rr]esult*
+[Bb]uild[Ll]og.*
+*.sass-cache
+
+#Project files
+[Bb]uild/
+bld/
+
+#Subversion files
+.svn
+
+# Office Temp Files
+~$*
+
+# vim Temp Files
+*~
+
+#NuGet
+packages/
+*.nupkg
+
+#ncrunch
+*ncrunch*
+*crunch*.local.xml
+
+# visual studio database projects
+*.dbmdl
+
+#Test files
+*.testsettings
+
+# NUNIT
+*.VisualState.xml
+TestResult.xml
+
+# Build Results of an ATL Project
+[Dd]ebugPS/
+[Rr]eleasePS/
+dlldata.c
